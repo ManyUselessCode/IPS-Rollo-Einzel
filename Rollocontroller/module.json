@@ -1,0 +1,11 @@
+{
+  "id": "{538C45A0-C09E-4F99-9973-D83E1C99C26B}",
+  "name": "Rollocontroller",
+  "type": 3,
+  "vendor": "",
+  "aliases": ["Rollo", "Rollo-Controller", "Rollo Einzel", "Rollladen"],
+  "parentRequirements": [],
+  "childRequirements": [],
+  "implemented": [],
+  "prefix": "ROLLOCONTROLLER"
+}

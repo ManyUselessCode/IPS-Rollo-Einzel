@@ -1,0 +1,304 @@
+{
+  "elements": [
+    { "type": "SelectCategory", "name": "EinstellungenID", "caption": "Ordner mit den Variablen der Wohnung" },
+    {
+      "type": "Label",
+      "caption": "Die Zeitpunkte Rauf heute und Runter heute, der Schalter der Verschattung, Öffnungswinkel und Mindest-Sonnenhöhe gelten für alle Rollos und liegen als Variablen in diesem Ordner. Nötig ist er nur für Morgens öffnen, Abends schließen und Verschattung. Fehlende Variablen legt die Schaltfläche unten an."
+    },
+    {
+      "type": "ExpansionPanel",
+      "caption": "Rollo",
+      "expanded": true,
+      "items": [
+        {
+          "type": "SelectInstance",
+          "name": "FahrenID",
+          "caption": "Auf/Ab fahren (Instanz)",
+          "validModules": ["{F3058AB2-AFDC-4479-A053-5F4599DF6F5B}"]
+        },
+        {
+          "type": "SelectInstance",
+          "name": "StoppID",
+          "caption": "Stopp (Instanz)",
+          "validModules": ["{F3058AB2-AFDC-4479-A053-5F4599DF6F5B}"]
+        },
+        {
+          "type": "SelectInstance",
+          "name": "PositionID",
+          "caption": "Position Höhe anfahren (Instanz)",
+          "validModules": ["{EBD0EE8D-DFA5-449F-BBE4-49CFC5F0EEB4}"]
+        },
+        { "type": "SelectVariable", "name": "StatusID", "caption": "Status Höhe (Variable)" },
+        {
+          "type": "SelectInstance",
+          "name": "SperrenID",
+          "caption": "Sperren (Instanz)",
+          "validModules": ["{F3058AB2-AFDC-4479-A053-5F4599DF6F5B}"]
+        },
+        {
+          "type": "Label",
+          "caption": "Gesperrt wird ein Rollo, indem Sperren gesetzt wird. Der Aktor verhindert dann jede Fahrt, und das Modul schickt dem Rollo keine Fahrbefehle."
+        },
+        {
+          "type": "NumberSpinner",
+          "name": "Fahrzeit",
+          "caption": "Fahrzeit",
+          "suffix": "Sekunden",
+          "minimum": 1
+        },
+        {
+          "type": "Label",
+          "caption": "Zeit für eine ganze Fahrt. Der Aktor meldet die Position am Ende der Fahrt, damit endet sie auch im Modul. Kommt keine Meldung, gilt die Fahrt nach der doppelten Zeit als beendet."
+        },
+        {
+          "type": "NumberSpinner",
+          "name": "Lueftungsposition",
+          "caption": "Lüftungsposition",
+          "suffix": "% geschlossen",
+          "minimum": 0,
+          "maximum": 100
+        },
+        {
+          "type": "Label",
+          "caption": "Positionen sind Prozent geschlossen wie am Aktor und in Symcon: 0 = ganz offen, 100 = zu. 80 heißt zu 80 % geschlossen."
+        },
+        {
+          "type": "NumberSpinner",
+          "name": "Himmelsrichtung",
+          "caption": "Himmelsrichtung",
+          "suffix": "°",
+          "digits": 1,
+          "minimum": 0,
+          "maximum": 360
+        },
+        {
+          "type": "Label",
+          "caption": "Grad, in die das Fenster zeigt: 0 = Nord, 90 = Ost, 180 = Süd, 270 = West. Nur für die Verschattung."
+        }
+      ]
+    },
+    {
+      "type": "ExpansionPanel",
+      "caption": "Automatik",
+      "expanded": true,
+      "items": [
+        { "type": "CheckBox", "name": "MorgensOeffnen", "caption": "Morgens öffnen" },
+        {
+          "type": "Label",
+          "caption": "Fährt ganz auf zum Zeitpunkt in der Variable Rauf heute. Steht dort 0, fährt das Rollo heute nicht. Ein Zeitpunkt, der schon vorbei ist, wird nie nachgeholt."
+        },
+        { "type": "CheckBox", "name": "AbendsSchliessen", "caption": "Abends schließen" },
+        {
+          "type": "Label",
+          "caption": "Fährt zu zum Zeitpunkt in der Variable Runter heute, sonst wie Morgens öffnen."
+        },
+        { "type": "SelectVariable", "name": "AutomatikID", "caption": "Schalter Automatik (optional, Variable)" },
+        {
+          "type": "Label",
+          "caption": "Leer: Das Rollo bekommt einen eigenen Schalter Automatik. Mit ihm legt man je Rollo fest, ob es automatisch fährt: Aus heißt, das Rollo folgt den beiden Zeitpunkten nicht. Für einen Schalter je Raum hier die Variable wählen, zum Beispiel den Schalter Automatik eines anderen Rollos. Gibt es die gewählte Variable nicht mehr, fährt das Rollo wie ohne Schalter. Taster, Lüften, Verschattung und Sperre sind nicht betroffen."
+        },
+        { "type": "CheckBox", "name": "Verschattung", "caption": "Verschattung" },
+        {
+          "type": "Label",
+          "caption": "Scheint die Sonne aufs Fenster (Himmelsrichtung, Öffnungswinkel, Mindest-Sonnenhöhe), fährt das Rollo in die Verschattungsposition, danach wieder auf. Nur wenn Automatik Verschattung der Wohnung an ist."
+        },
+        {
+          "type": "NumberSpinner",
+          "name": "Verschattungsposition",
+          "caption": "Verschattungsposition",
+          "suffix": "% geschlossen",
+          "minimum": 0,
+          "maximum": 100
+        },
+        { "type": "SelectVariable", "name": "VerschattungID", "caption": "Schalter Verschattung (optional, Variable)" },
+        {
+          "type": "Label",
+          "caption": "Leer: Das Rollo bekommt einen eigenen Schalter Verschattung. Aus heißt keine Verschattung, ein gerade verschattetes Rollo bleibt stehen, und Morgens öffnen fährt ganz auf. Für einen Schalter je Raum hier die Variable wählen."
+        }
+      ]
+    },
+    {
+      "type": "ExpansionPanel",
+      "caption": "MDT-Taster (optional)",
+      "items": [
+        {
+          "type": "List",
+          "name": "MdtWippenKurz",
+          "caption": "MDT-Wippen kurz (oben = aus = auf, unten = an = ab)",
+          "rowCount": 3,
+          "add": true,
+          "delete": true,
+          "columns": [
+            { "caption": "Name (steht im Grund)", "name": "Name", "width": "50%", "add": "", "edit": { "type": "ValidationTextBox" } },
+            { "caption": "Wippe Kurz (Variable)", "name": "VariableID", "width": "auto", "add": 0, "edit": { "type": "SelectVariable" } }
+          ]
+        },
+        {
+          "type": "List",
+          "name": "MdtWippenLang",
+          "caption": "MDT-Wippen lang (unten = an = Lüftungsposition, oben = frei)",
+          "rowCount": 3,
+          "add": true,
+          "delete": true,
+          "columns": [
+            { "caption": "Name (steht im Grund)", "name": "Name", "width": "50%", "add": "", "edit": { "type": "ValidationTextBox" } },
+            { "caption": "Wippe Lang (Variable)", "name": "VariableID", "width": "auto", "add": 0, "edit": { "type": "SelectVariable" } }
+          ]
+        },
+        {
+          "type": "List",
+          "name": "MdtLedsAuf",
+          "caption": "MDT-LEDs der Auf-Tasten (Grün solange das Rollo auffährt, sonst Blau)",
+          "rowCount": 3,
+          "add": true,
+          "delete": true,
+          "columns": [
+            { "caption": "LED Farbe (Instanz)", "name": "InstanceID", "width": "auto", "add": 0, "edit": { "type": "SelectInstance", "validModules": ["{EBD0EE8D-DFA5-449F-BBE4-49CFC5F0EEB4}"] } }
+          ]
+        },
+        {
+          "type": "List",
+          "name": "MdtLedsAb",
+          "caption": "MDT-LEDs der Ab-Tasten (Grün solange das Rollo abfährt, sonst Blau)",
+          "rowCount": 3,
+          "add": true,
+          "delete": true,
+          "columns": [
+            { "caption": "LED Farbe (Instanz)", "name": "InstanceID", "width": "auto", "add": 0, "edit": { "type": "SelectInstance", "validModules": ["{EBD0EE8D-DFA5-449F-BBE4-49CFC5F0EEB4}"] } }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ExpansionPanel",
+      "caption": "Jung-Taster (optional)",
+      "items": [
+        {
+          "type": "List",
+          "name": "JungWippenKurz",
+          "caption": "Jung-Wippen kurz (an = auf, aus = ab)",
+          "rowCount": 3,
+          "add": true,
+          "delete": true,
+          "columns": [
+            { "caption": "Name (steht im Grund)", "name": "Name", "width": "40%", "add": "", "edit": { "type": "ValidationTextBox" } },
+            { "caption": "Wippe Kurz (Variable)", "name": "VariableID", "width": "auto", "add": 0, "edit": { "type": "SelectVariable" } },
+            { "caption": "Invertiert", "name": "Invertiert", "width": "100px", "add": false, "edit": { "type": "CheckBox" } }
+          ]
+        },
+        {
+          "type": "List",
+          "name": "JungWippenLang",
+          "caption": "Jung-Wippen lang (aus = Lüftungsposition, an = frei)",
+          "rowCount": 3,
+          "add": true,
+          "delete": true,
+          "columns": [
+            { "caption": "Name (steht im Grund)", "name": "Name", "width": "40%", "add": "", "edit": { "type": "ValidationTextBox" } },
+            { "caption": "Wippe Lang (Variable)", "name": "VariableID", "width": "auto", "add": 0, "edit": { "type": "SelectVariable" } },
+            { "caption": "Invertiert", "name": "Invertiert", "width": "100px", "add": false, "edit": { "type": "CheckBox" } }
+          ]
+        },
+        {
+          "type": "Label",
+          "caption": "Sendet eine Wippe umgekehrt, Invertiert setzen."
+        },
+        {
+          "type": "List",
+          "name": "JungLedsBlau",
+          "caption": "Jung-LEDs Blau (an, wenn das Rollo steht)",
+          "rowCount": 3,
+          "add": true,
+          "delete": true,
+          "columns": [
+            { "caption": "LED Blau (Instanz)", "name": "InstanceID", "width": "auto", "add": 0, "edit": { "type": "SelectInstance", "validModules": ["{F3058AB2-AFDC-4479-A053-5F4599DF6F5B}"] } }
+          ]
+        },
+        {
+          "type": "List",
+          "name": "JungLedsAufGruen",
+          "caption": "Jung-LEDs Grün auf der Auf-Seite (an, solange das Rollo auffährt)",
+          "rowCount": 3,
+          "add": true,
+          "delete": true,
+          "columns": [
+            { "caption": "LED Grün (Instanz)", "name": "InstanceID", "width": "auto", "add": 0, "edit": { "type": "SelectInstance", "validModules": ["{F3058AB2-AFDC-4479-A053-5F4599DF6F5B}"] } }
+          ]
+        },
+        {
+          "type": "List",
+          "name": "JungLedsAbGruen",
+          "caption": "Jung-LEDs Grün auf der Ab-Seite (an, solange das Rollo abfährt)",
+          "rowCount": 3,
+          "add": true,
+          "delete": true,
+          "columns": [
+            { "caption": "LED Grün (Instanz)", "name": "InstanceID", "width": "auto", "add": 0, "edit": { "type": "SelectInstance", "validModules": ["{F3058AB2-AFDC-4479-A053-5F4599DF6F5B}"] } }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ExpansionPanel",
+      "caption": "Einzeltasten (optional)",
+      "items": [
+        {
+          "type": "List",
+          "name": "TastenAufKurz",
+          "caption": "Auf-Tasten kurz (jedes Telegramm zählt als Druck)",
+          "rowCount": 3,
+          "add": true,
+          "delete": true,
+          "columns": [
+            { "caption": "Name (steht im Grund)", "name": "Name", "width": "50%", "add": "", "edit": { "type": "ValidationTextBox" } },
+            { "caption": "Taste Kurz (Variable)", "name": "VariableID", "width": "auto", "add": 0, "edit": { "type": "SelectVariable" } }
+          ]
+        },
+        {
+          "type": "List",
+          "name": "TastenAbKurz",
+          "caption": "Ab-Tasten kurz",
+          "rowCount": 3,
+          "add": true,
+          "delete": true,
+          "columns": [
+            { "caption": "Name (steht im Grund)", "name": "Name", "width": "50%", "add": "", "edit": { "type": "ValidationTextBox" } },
+            { "caption": "Taste Kurz (Variable)", "name": "VariableID", "width": "auto", "add": 0, "edit": { "type": "SelectVariable" } }
+          ]
+        },
+        {
+          "type": "List",
+          "name": "TastenAbLang",
+          "caption": "Ab-Tasten lang (Lüftungsposition)",
+          "rowCount": 3,
+          "add": true,
+          "delete": true,
+          "columns": [
+            { "caption": "Name (steht im Grund)", "name": "Name", "width": "50%", "add": "", "edit": { "type": "ValidationTextBox" } },
+            { "caption": "Taste Lang (Variable)", "name": "VariableID", "width": "auto", "add": 0, "edit": { "type": "SelectVariable" } }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Label",
+      "caption": "Kurz: fahren, in die laufende Richtung nochmal: Stopp. Lang unten: Lüftungsposition, lang oben: ohne Funktion. LEDs: Grün fährt, Blau steht."
+    }
+  ],
+  "actions": [
+    {
+      "type": "Button",
+      "caption": "Fehlende Variablen der Wohnung anlegen",
+      "onClick": "ROLLOCONTROLLER_EinstellungenAnlegen($id); IPS_ApplyChanges($id); echo 'Die Variablen der Wohnung sind angelegt.';"
+    },
+    {
+      "type": "Label",
+      "caption": "Legt im gewählten Ordner die Variablen an, die dort noch fehlen, mit Vorgabe und Darstellung. Vorhandene Variablen und ihre Werte bleiben, wie sie sind."
+    }
+  ],
+  "status": [
+    { "code": 104, "icon": "inactive", "caption": "Auf/Ab fahren, Stopp, Position Höhe anfahren, Status Höhe oder Sperren ist nicht eingestellt" },
+    { "code": 201, "icon": "error", "caption": "Eine Einstellung fehlt oder ist ungültig, siehe Log" },
+    { "code": 202, "icon": "error", "caption": "Für Morgens öffnen, Abends schließen und Verschattung fehlt der Ordner mit den Variablen der Wohnung" }
+  ]
+}
