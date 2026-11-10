@@ -18,7 +18,7 @@ Wann die Rollos morgens und abends fahren, rechnet nicht das Modul. Ein Skript s
 | `Oeffnungswinkel` | Öffnungswinkel | Grad links und rechts der Himmelsrichtung, in denen die Sonne aufs Fenster scheint | 80 |
 | `Mindesthoehe` | Mindest-Sonnenhöhe | Grad über dem Horizont, ab denen verschattet wird | 10 |
 
-Die beiden Zeitpunkte sind Zeitstempel mit Datum und Uhrzeit. 0 heißt: heute nicht.
+Die beiden Zeitpunkte sind Zeitstempel des Tages, angezeigt wird nur die Uhrzeit. Ein Wert unter 86400 gilt als Sekunden seit Mitternacht des laufenden Tages. 0 heißt: heute nicht.
 
 Die Schaltfläche „Fehlende Variablen der Wohnung anlegen“ im Formular oder `ROLLOCONTROLLER_EinstellungenAnlegen(ID)` legt im Ordner an, was fehlt: die Variablen mit Vorgabe und Darstellung und ein verstecktes Aktionsskript „Wert übernehmen“, damit sie sich auch in App und WebFront ändern lassen. Vorhandene Variablen und ihre Werte bleiben.
 

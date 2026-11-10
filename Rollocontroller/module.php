@@ -890,7 +890,7 @@ class Rollocontroller extends IPSModule
         $stand = $this->Sonnenstand();
         $tief = $stand === null || $stand['Hoehe'] <= (float) $this->Einstellung('Mindesthoehe', 10);
         $abends = $this->ReadPropertyBoolean('AbendsSchliessen') && $this->AutomatikFrei()
-            && (int) $this->Einstellung('RunterHeute', 0) > time();
+            && $this->Zeitpunkt('RunterHeute') > time();
         if ($position !== null && abs($position - $ziel) <= self::TOLERANZ && !($tief && $abends)) {
             $grund = $this->Einstellung('AutomatikVerschattung', false) ? 'Sonne nicht mehr auf dem Fenster' : 'Automatik Verschattung aus';
             $this->Fahren(self::OFFEN, 'Auf: ' . $grund);
@@ -949,7 +949,7 @@ class Rollocontroller extends IPSModule
         $naechste = [mktime(0, 0, 30, (int) date('n', $jetzt), (int) date('j', $jetzt) + 1, (int) date('Y', $jetzt))];
         foreach (self::ZEITPUNKTE as $ident => $eigenschaft) {
             $gestellt = (int) $this->GetBuffer('Gestellt' . $ident);
-            $ziel = $this->ReadPropertyBoolean($eigenschaft) ? (int) $this->Einstellung($ident, 0) : 0;
+            $ziel = $this->ReadPropertyBoolean($eigenschaft) ? $this->Zeitpunkt($ident) : 0;
             $this->SetBuffer('Gestellt' . $ident, $ziel > $jetzt ? (string) $ziel : '');
             if ($ziel > $jetzt) {
                 $naechste[] = $ziel;
@@ -1238,13 +1238,32 @@ class Rollocontroller extends IPSModule
         ];
     }
 
+    /**
+     * Rauf heute oder Runter heute als Zeitstempel, 0 = heute nicht. Die Variable hält den
+     * Zeitstempel des Tages. Ein Wert unter 86400 gilt als Sekunden seit Mitternacht des
+     * laufenden Tages, falls die App beim Ändern einer reinen Uhrzeit so einen Wert schreibt.
+     */
+    private function Zeitpunkt(string $ident): int
+    {
+        $wert = (int) $this->Einstellung($ident, 0);
+        if ($wert <= 0) {
+            return 0;
+        }
+        if ($wert < 86400) {
+            $jetzt = time();
+            return mktime(intdiv($wert, 3600), intdiv($wert % 3600, 60), $wert % 60, (int) date('n', $jetzt), (int) date('j', $jetzt), (int) date('Y', $jetzt));
+        }
+        return $wert;
+    }
+
+    // Nur die Uhrzeit, das Datum ist immer heute (Sven, 10.11.2026)
     private function Zeit(): array
     {
         return [
             'PRESENTATION'    => self::DARSTELLUNG_ZEIT,
-            'DATE'            => 2, // Monat und Tag
+            'DATE'            => 0, // kein Datum
             'TIME'            => 1, // Stunden und Minuten
-            'DAY_OF_THE_WEEK' => true,
+            'DAY_OF_THE_WEEK' => false,
             'MONTH_TEXT'      => false
         ];
     }

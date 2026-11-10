@@ -265,6 +265,8 @@ foreach (Sym::kinder($k['Ordner']) as $id) {
     }
 }
 gleich($ist, $erwartet, 'sieben Variablen mit Vorgaben, beide Zeitpunkte 0 = heute nicht');
+$darstellung = Sym::$variablen[Sym::kind($k['Ordner'], 'RaufHeute')]['Darstellung'];
+gleich([$darstellung['DATE'], $darstellung['TIME'], $darstellung['DAY_OF_THE_WEEK']], [0, 1, false], 'Rauf heute zeigt nur die Uhrzeit, kein Datum');
 pruefe($skript > 0 && Sym::$objekte[$skript]['Hidden'] && str_contains(Sym::$skripte[$skript], "SetValue(\$_IPS['VARIABLE'], \$_IPS['VALUE']);"), 'verstecktes Aktionsskript übernimmt den Wert');
 $sonneZeit = array_merge((new ReflectionClassConstant('Rollocontroller', 'EINSTELLUNGEN_SONNE'))->getValue(), array_keys((new ReflectionClassConstant('Rollocontroller', 'ZEITPUNKTE'))->getValue()));
 gleich([array_diff($sonneZeit, array_keys($erwartet)), array_values(array_diff(array_keys($erwartet), $sonneZeit))], [[], ['AutomatikRauf', 'AutomatikRunter']], 'das Modul überwacht die Zeitpunkte und die Sonnenwerte, die Wohnungsschalter Rauf und Runter liest es erst zum Zeitpunkt');
@@ -625,6 +627,14 @@ gleich(fahrten($k), [], 'das Skript schreibt einen Zeitpunkt, der schon vorbei i
 wohnung($k, 'RaufHeute', $um('08:00:00', '2026-11-09'));
 Sym::weiter(60);
 gleich(fahrten($k), [], 'ein Zeitpunkt von gestern zählt nicht');
+[$m, $k, $a] = aufbau($nacht + ['Werte' => ['RaufHeute' => 8 * 3600, 'RunterHeute' => 16 * 3600 + 49 * 60 + 5]]);
+Sym::lauf(zeit('2026-11-10 23:00:00'));
+gleich(fahrten($k), ['Tue 08:00:00 auf', 'Tue 16:49:05 ab'], 'Sekunden seit Mitternacht statt Zeitstempel: gelten für heute');
+[$m, $k, $a] = aufbau($nacht + ['Werte' => ['RaufHeute' => 8 * 3600]]);
+Sym::lauf(zeit('2026-11-10 09:00:00'));
+wohnung($k, 'RaufHeute', 7 * 3600);
+Sym::lauf(zeit('2026-11-10 23:00:00'));
+gleich(fahrten($k), ['Tue 08:00:00 auf'], 'Sekunden seit Mitternacht, die heute schon vorbei sind: nichts nachgeholt');
 
 [$m, $k, $a] = aufbau($nacht + ['Werte' => $tag]);
 Sym::lauf(zeit('2026-11-10 07:50:00'));
