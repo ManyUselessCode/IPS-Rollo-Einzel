@@ -68,6 +68,7 @@ class Rollocontroller extends IPSModule
     ];
     // Tasten, die einen Schalter des Rollos umschalten: Liste => Ident des Schalters
     private const SCHALTER_TASTEN = ['TastenAutomatik' => 'Automatik', 'TastenVerschattung' => 'Verschattung'];
+    private const SCHALTER_LEDS = ['InstanceID', 'JungGruenID', 'JungRotID'];
     private const LED_LISTEN = ['MdtLedsAuf', 'MdtLedsAb', 'JungLedsBlau', 'JungLedsAufGruen', 'JungLedsAbGruen'];
 
     // Variablen der Wohnung im Ordner der Einstellungen, gesucht über ihren Ident.
@@ -381,8 +382,10 @@ class Rollocontroller extends IPSModule
             foreach ($this->Liste($liste) as $taste) {
                 $this->RegisterMessage($taste['VariableID'], VM_UPDATE);
                 $this->RegisterReference($taste['VariableID']);
-                if (($taste['InstanceID'] ?? 0) > 0) {
-                    $this->RegisterReference($taste['InstanceID']);
+                foreach (self::SCHALTER_LEDS as $feld) {
+                    if (($taste[$feld] ?? 0) > 0) {
+                        $this->RegisterReference($taste[$feld]);
+                    }
                 }
             }
         }
@@ -445,8 +448,10 @@ class Rollocontroller extends IPSModule
                 } elseif (in_array($taste['VariableID'], $rollo, true)) {
                     $falsch[] = 'Taste ' . $taste['VariableID'] . ' ist eine Adresse des Rollos';
                 }
-                if (($taste['InstanceID'] ?? 0) > 0 && !IPS_InstanceExists($taste['InstanceID'])) {
-                    $falsch[] = 'LED ' . $taste['InstanceID'];
+                foreach (self::SCHALTER_LEDS as $feld) {
+                    if (($taste[$feld] ?? 0) > 0 && !IPS_InstanceExists($taste[$feld])) {
+                        $falsch[] = 'LED ' . $taste[$feld];
+                    }
                 }
             }
         }
@@ -595,7 +600,8 @@ class Rollocontroller extends IPSModule
     }
 
     /**
-     * Die LED einer Schalter-Taste zeigt den Schalter: Grün an, Rot aus. Teilen sich mehrere
+     * Die LED einer Schalter-Taste zeigt den Schalter: Grün an, Rot aus (MDT eine LED mit Farbwert,
+     * Jung je Farbe eine LED). Teilen sich mehrere
      * Rollos die Taste, ist sie nur Grün, wenn alle ihre Schalter an sind.
      */
     private function SchalterLedsSetzen(string $nur = ''): void
@@ -608,14 +614,26 @@ class Rollocontroller extends IPSModule
                 continue;
             }
             foreach ($this->Liste($liste) as $taste) {
-                if (($taste['InstanceID'] ?? 0) == 0) {
+                $mdt = $taste['InstanceID'] ?? 0;
+                $gruen = $taste['JungGruenID'] ?? 0;
+                $rot = $taste['JungRotID'] ?? 0;
+                if ($mdt == 0 && $gruen == 0 && $rot == 0) {
                     continue;
                 }
                 $gruppe = $this->SchalterGruppe($liste, $taste['VariableID']);
                 if (!isset($gruppe[$this->InstanceID])) {
                     continue;
                 }
-                @KNX_WriteDPT5($taste['InstanceID'], in_array(false, $gruppe, true) ? self::LED_ROT : self::LED_GRUEN);
+                $an = !in_array(false, $gruppe, true);
+                if ($mdt > 0) {
+                    @KNX_WriteDPT5($mdt, $an ? self::LED_GRUEN : self::LED_ROT);
+                }
+                // Jung: je Farbe eine eigene LED, erst die falsche aus, dann die richtige an
+                foreach ($an ? [[$rot, false], [$gruen, true]] : [[$gruen, false], [$rot, true]] as [$led, $wert]) {
+                    if ($led > 0) {
+                        @KNX_WriteDPT1($led, $wert);
+                    }
+                }
             }
         }
     }

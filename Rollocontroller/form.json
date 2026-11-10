@@ -104,9 +104,11 @@
           "add": true,
           "delete": true,
           "columns": [
-            { "caption": "Name (steht im Grund)", "name": "Name", "width": "30%", "add": "", "edit": { "type": "ValidationTextBox" } },
+            { "caption": "Name (steht im Grund)", "name": "Name", "width": "20%", "add": "", "edit": { "type": "ValidationTextBox" } },
             { "caption": "Taste Kurz (Variable)", "name": "VariableID", "width": "auto", "add": 0, "edit": { "type": "SelectVariable" } },
-            { "caption": "MDT LED Farbe (Instanz, optional)", "name": "InstanceID", "width": "35%", "add": 0, "edit": { "type": "SelectInstance", "validModules": ["{EBD0EE8D-DFA5-449F-BBE4-49CFC5F0EEB4}"] } }
+            { "caption": "MDT LED Farbe (Instanz, optional)", "name": "InstanceID", "width": "20%", "add": 0, "edit": { "type": "SelectInstance", "validModules": ["{EBD0EE8D-DFA5-449F-BBE4-49CFC5F0EEB4}"] } },
+            { "caption": "Jung LED Grün (Instanz, optional)", "name": "JungGruenID", "width": "20%", "add": 0, "edit": { "type": "SelectInstance", "validModules": ["{F3058AB2-AFDC-4479-A053-5F4599DF6F5B}"] } },
+            { "caption": "Jung LED Rot (Instanz, optional)", "name": "JungRotID", "width": "20%", "add": 0, "edit": { "type": "SelectInstance", "validModules": ["{F3058AB2-AFDC-4479-A053-5F4599DF6F5B}"] } }
           ]
         },
         {
@@ -138,9 +140,11 @@
           "add": true,
           "delete": true,
           "columns": [
-            { "caption": "Name (steht im Grund)", "name": "Name", "width": "30%", "add": "", "edit": { "type": "ValidationTextBox" } },
+            { "caption": "Name (steht im Grund)", "name": "Name", "width": "20%", "add": "", "edit": { "type": "ValidationTextBox" } },
             { "caption": "Taste Kurz (Variable)", "name": "VariableID", "width": "auto", "add": 0, "edit": { "type": "SelectVariable" } },
-            { "caption": "MDT LED Farbe (Instanz, optional)", "name": "InstanceID", "width": "35%", "add": 0, "edit": { "type": "SelectInstance", "validModules": ["{EBD0EE8D-DFA5-449F-BBE4-49CFC5F0EEB4}"] } }
+            { "caption": "MDT LED Farbe (Instanz, optional)", "name": "InstanceID", "width": "20%", "add": 0, "edit": { "type": "SelectInstance", "validModules": ["{EBD0EE8D-DFA5-449F-BBE4-49CFC5F0EEB4}"] } },
+            { "caption": "Jung LED Grün (Instanz, optional)", "name": "JungGruenID", "width": "20%", "add": 0, "edit": { "type": "SelectInstance", "validModules": ["{F3058AB2-AFDC-4479-A053-5F4599DF6F5B}"] } },
+            { "caption": "Jung LED Rot (Instanz, optional)", "name": "JungRotID", "width": "20%", "add": 0, "edit": { "type": "SelectInstance", "validModules": ["{F3058AB2-AFDC-4479-A053-5F4599DF6F5B}"] } }
           ]
         }
       ]

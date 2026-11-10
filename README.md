@@ -26,7 +26,7 @@ Die Schaltfläche „Fehlende Variablen der Wohnung anlegen“ im Formular oder 
 
 - **Ordner mit den Variablen der Wohnung.**
 - **Rollo:** Auf/Ab fahren (KNX DPT 1.008), Stopp (DPT 1), Position Höhe anfahren (DPT 5.001), Status Höhe (Variable, DPT 5.001), Sperren (DPT 1), Fahrzeit (Vorgabe 30 Sekunden), Lüftungsposition (Vorgabe 80), Himmelsrichtung (0 = Nord, 90 = Ost, 180 = Süd, 270 = West).
-- **Automatik:** Morgens öffnen, Abends schließen, Verschattung, Verschattungsposition (Vorgabe 80), dazu „Tasten Automatik“ und „Tasten Verschattung“: je Zeile eine Taste (Variable „Kurz“) und optional ihre MDT-LED.
+- **Automatik:** Morgens öffnen, Abends schließen, Verschattung, Verschattungsposition (Vorgabe 80), dazu „Tasten Automatik“ und „Tasten Verschattung“: je Zeile eine Taste (Variable „Kurz“) und optional ihre LED: bei MDT die „LED Farbe“, bei Jung „LED Grün“ und „LED Rot“.
 - **MDT-Taster:** Wippen kurz und lang, LEDs der Auf-Tasten und der Ab-Tasten.
 - **Jung-Taster:** Wippen kurz und lang (je mit „Invertiert“), LEDs Blau, Grün auf der Auf-Seite, Grün auf der Ab-Seite.
 - **Einzeltasten:** Auf kurz, Ab kurz, Ab lang.
@@ -42,7 +42,7 @@ Jede Adresse des Rollos braucht ihre eigene Instanz. Dieselbe Instanz für zwei 
 - **Verschattung:** aus = keine Verschattung für dieses Rollo. Gibt es nur, wenn die Verschattung eingestellt ist, Vorgabe an.
 - **Grund:** Text zur letzten Entscheidung, zum Beispiel „Ab: Tür Wippe 2“, „Lüften: Tür Wippe 2“, „Auf: Morgens“, „Verschattung: Sonne auf dem Fenster“, „Ab: von Extern“ oder „Gesperrt: Ab von Tür Wippe 2 nicht ausgeführt“. Versteckt, zum Auswerten im Archiv aufzeichnen.
 
-Beide Schalter lassen sich in App und WebFront schalten und zusätzlich mit einer Taste: Jedes Telegramm einer Taste aus „Tasten Automatik“ oder „Tasten Verschattung“ schaltet den Schalter um, im Grund steht dann zum Beispiel „Automatik aus: Taste 11“. Die LED der Taste zeigt immer den Schalter, Grün = an, Rot = aus, auch nach einer Änderung in der App und nach dem Start.
+Beide Schalter lassen sich in App und WebFront schalten und zusätzlich mit einer Taste: Jedes Telegramm einer Taste aus „Tasten Automatik“ oder „Tasten Verschattung“ schaltet den Schalter um, im Grund steht dann zum Beispiel „Automatik aus: Taste 11“. Die LED der Taste zeigt immer den Schalter, Grün = an, Rot = aus, auch nach einer Änderung in der App und nach dem Start. Bei Jung-Tastern schaltet das Modul dafür die grüne und die rote LED, Blau fasst es nicht an.
 
 Für eine Taste je Raum trägt man dieselbe Taste und LED bei jedem Rollo des Raums ein. Die Taste gleicht dann an: Ist einer der Schalter an, gehen alle aus, sonst alle an. Die LED ist nur Grün, wenn alle an sind. Ein Rollo ohne Verschattung hat keinen Schalter Verschattung und zählt dort nicht mit.
 

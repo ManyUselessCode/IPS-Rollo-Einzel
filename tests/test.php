@@ -971,5 +971,62 @@ gleich($m->status, 201, 'eine Taste, die es nicht gibt: Fehler 201');
 druecke($k['TasteAuf'], true);
 gleich([$m->status, $m->GetValue('Automatik')], [IS_ACTIVE, false], 'Taste ohne LED: schaltet um');
 
+titel('Schalter-Tasten mit Jung-LEDs');
+$j = [];
+$jung = function (array $e, array $k): array {
+    $raum = IPS_GetParent($k['Fahren']);
+    $GLOBALS['j'] = [
+        'T5' => Sym::knx('T5', $raum, 1), 'Gruen' => Sym::knx('T5 Grün', $raum, 1), 'Rot' => Sym::knx('T5 Rot', $raum, 1),
+        'T6' => Sym::knx('T6', $raum, 1), 'NurRot' => Sym::knx('T6 Rot', $raum, 1)
+    ];
+    $j = $GLOBALS['j'];
+    return [
+        'Verschattung' => true, 'EinstellungenID' => $k['Ordner'],
+        'TastenAutomatik' => json_encode([['Name' => 'Taste 5', 'VariableID' => Sym::wert($j['T5']), 'InstanceID' => 0, 'JungGruenID' => $j['Gruen'], 'JungRotID' => $j['Rot']]]),
+        'TastenVerschattung' => json_encode([['Name' => 'Taste 6', 'VariableID' => Sym::wert($j['T6']), 'JungRotID' => $j['NurRot']]])
+    ] + $e;
+};
+$jleds = fn (int $ab): array => Sym::gesendet($ab, [$GLOBALS['j']['Gruen'], $GLOBALS['j']['Rot'], $GLOBALS['j']['NurRot']]);
+[$m, $k, $a] = aufbau(['Anpassen' => $jung]);
+$m->EinstellungenAnlegen();
+$ab = count(Sym::$telegramme);
+$m->ApplyChanges();
+Sym::verarbeite();
+gleich($m->status, IS_ACTIVE, 'aktiv mit Jung-LEDs');
+gleich($jleds($ab), ['T5 Rot=aus', 'T5 Grün=an', 'T6 Rot=aus'], 'nach dem Übernehmen: Rot aus, Grün an, einzelne rote LED aus');
+$ab = count(Sym::$telegramme);
+druecke($j['T5'], true);
+gleich([$m->GetValue('Automatik'), $m->GetValue('Grund'), $jleds($ab)], [false, 'Automatik aus: Taste 5', ['T5 Grün=aus', 'T5 Rot=an']], 'Taste 5: Automatik aus, Grün aus, Rot an');
+$ab = count(Sym::$telegramme);
+druecke($j['T5'], true);
+gleich([$m->GetValue('Automatik'), $jleds($ab)], [true, ['T5 Rot=aus', 'T5 Grün=an']], 'nochmal: Automatik an, Rot aus, Grün an');
+$ab = count(Sym::$telegramme);
+druecke($j['T6'], true);
+gleich([$m->GetValue('Verschattung'), $jleds($ab)], [false, ['T6 Rot=an']], 'nur LED Rot eingetragen: Rot an, sonst nichts');
+$ab = count(Sym::$telegramme);
+$m->RequestAction('Automatik', false);
+Sym::verarbeite();
+gleich($jleds($ab), ['T5 Grün=aus', 'T5 Rot=an'], 'aus der App: Jung-LEDs ziehen nach');
+$ab = count(Sym::$telegramme);
+$m->MessageSink(0, 0, IPS_KERNELMESSAGE, [KR_READY]);
+Sym::weiter(60);
+gleich($jleds($ab), ['T5 Grün=aus', 'T5 Rot=an', 'T6 Rot=an'], 'nach dem Start zeigen die Jung-LEDs den Stand der Schalter');
+// geteilte Taste: Grün nur, wenn alle an sind
+$m2 = zweites(['TastenAutomatik' => $m->eigenschaften['TastenAutomatik']]);
+$m->RequestAction('Automatik', true);
+Sym::verarbeite();
+$ab = count(Sym::$telegramme);
+$m2->RequestAction('Automatik', false);
+Sym::verarbeite();
+gleich($jleds($ab), ['T5 Grün=aus', 'T5 Rot=an'], 'geteilte Taste, eines aus: Rot');
+$ab = count(Sym::$telegramme);
+$m2->RequestAction('Automatik', true);
+Sym::verarbeite();
+gleich($jleds($ab), ['T5 Rot=aus', 'T5 Grün=an'], 'geteilte Taste, beide an: Grün');
+[$m, $k, $a] = aufbau(['Anpassen' => function (array $e, array $k): array {
+    return ['TastenAutomatik' => json_encode([['Name' => 'x', 'VariableID' => Sym::wert($k['TasteAuf']), 'InstanceID' => 0, 'JungGruenID' => 99999, 'JungRotID' => 0]]), 'TastenAufKurz' => '[]'] + $e;
+}]);
+gleich($m->status, 201, 'eine Jung-LED, die es nicht gibt: Fehler 201');
+
 echo "\n" . $anzahl . ' Prüfungen, ' . $fehler . " Fehler\n";
 exit($fehler > 0 ? 1 : 0);
