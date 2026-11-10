@@ -25,6 +25,7 @@ const VARIABLETYPE_STRING = 3;
 
 const KNX_DPT1 = '{F3058AB2-AFDC-4479-A053-5F4599DF6F5B}';
 const KNX_DPT5 = '{EBD0EE8D-DFA5-449F-BBE4-49CFC5F0EEB4}';
+const EIGENES_MODUL = '{538C45A0-C09E-4F99-9973-D83E1C99C26B}';
 const STANDORT = '{45E97A63-F870-408A-B259-2933F7EABF74}';
 
 date_default_timezone_set('Europe/Berlin');
@@ -705,11 +706,31 @@ function RequestAction(int $id, $wert): bool
 
 function IPS_GetInstanceListByModuleID(string $modul): array
 {
+    if ($modul == EIGENES_MODUL) {
+        return array_keys(Sym::$module);
+    }
     return array_keys(array_filter(Sym::$instanzen, fn (array $instanz): bool => $instanz['Modul'] == $modul));
+}
+
+function IPS_GetInstance(int $id): array
+{
+    if (isset(Sym::$module[$id])) {
+        return ['InstanceID' => $id, 'InstanceStatus' => Sym::$module[$id]->status, 'ModuleInfo' => ['ModuleID' => EIGENES_MODUL]];
+    }
+    return ['InstanceID' => $id, 'InstanceStatus' => IS_ACTIVE, 'ModuleInfo' => ['ModuleID' => Sym::$instanzen[$id]['Modul']]];
+}
+
+function IPS_RequestAction(int $id, string $ident, $wert): bool
+{
+    Sym::$module[$id]->RequestAction($ident, $wert);
+    return true;
 }
 
 function IPS_GetProperty(int $id, string $name)
 {
+    if (isset(Sym::$module[$id])) {
+        return Sym::$module[$id]->eigenschaften[$name];
+    }
     return Sym::$instanzen[$id]['Eigenschaften'][$name];
 }
 

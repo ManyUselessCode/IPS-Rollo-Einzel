@@ -179,12 +179,12 @@ gleich($m->status, IS_ACTIVE, 'Rollo ohne Automatik ist aktiv, auch ohne Ordner 
 gleich($m->GetValue('Fahrt'), STEHT, 'Fahrt steht');
 gleich($m->GetValue('Position'), 0, 'Position zeigt den Status');
 gleich($m->GetValue('Sperre'), false, 'Sperre aus');
-gleich(Sym::kind($m->InstanceID, 'Automatik'), 0, 'kein Schalter Automatik ohne Morgens und Abends');
+pruefe(Sym::kind($m->InstanceID, 'Automatik') > 0 && $m->GetValue('Automatik') === true, 'Schalter Automatik ist immer da und an, auch ohne Morgens und Abends');
 gleich(Sym::kind($m->InstanceID, 'Verschattung'), 0, 'kein Schalter Verschattung ohne Verschattung');
 pruefe(Sym::$objekte[$m->GetIDForIdent('Grund')]['Hidden'], 'Grund ist versteckt');
 gleich(Sym::gesendet(0, $k['Leds']), ['LedAuf=4', 'LedAb=4', 'JungBlau=an', 'JungAuf=aus', 'JungAb=aus'], 'beim Übernehmen alle LEDs: MDT blau, Jung blau an');
 gleich(Sym::gesendet(0, $k['Rollo']), [], 'beim Übernehmen kein Fahrbefehl');
-gleich(array_keys($m->aktionen), ['Position', 'Fahrt', 'Sperre'], 'bedienbar sind Position, Fahrt und Sperre');
+gleich(array_keys($m->aktionen), ['Position', 'Fahrt', 'Sperre', 'Automatik'], 'bedienbar sind Position, Fahrt, Sperre und Automatik');
 
 $form = json_decode(file_get_contents(__DIR__ . '/../Rollocontroller/form.json'), true);
 pruefe(is_array($form), 'form.json ist gültiges JSON');
@@ -859,13 +859,117 @@ $m->RequestAction('Verschattung', false);
 Sym::lauf(zeit('2026-06-15 12:00:00'));
 gleich(fahrten($k, 0, 'H:i'), ['08:00 auf'], 'mit Schalter Verschattung aus fährt Morgens öffnen ganz auf');
 
-[$m, $k, $a] = aufbau(['Anpassen' => function (array $e, array $k): array {
-    return ['Verschattung' => true, 'EinstellungenID' => $k['Ordner'], 'VerschattungID' => 99999] + $e;
-}]);
+titel('Tasten für Automatik und Verschattung');
+/**
+ * Zweites Rollo in derselben Anlage, mit eigenen KNX-Instanzen.
+ */
+function zweites(array $eigenschaften): Rollocontroller
+{
+    $raum = Sym::kategorie('Raum 2');
+    $id = Sym::objekt('Instanz', $raum, 'Rollo 2');
+    $modul = new Rollocontroller($id);
+    Sym::$module[$id] = $modul;
+    $modul->Create();
+    $eigenschaften += [
+        'FahrenID' => Sym::knx('Fahren 2', $raum, 1, false), 'StoppID' => Sym::knx('Stopp 2', $raum, 1),
+        'PositionID' => Sym::knx('Position 2', $raum, 5), 'StatusID' => Sym::wert(Sym::knx('Status 2', $raum, 5, 0)),
+        'SperrenID' => Sym::knx('Sperren 2', $raum, 1, false)
+    ];
+    foreach ($eigenschaften as $name => $wert) {
+        $modul->eigenschaften[$name] = $wert;
+    }
+    $modul->ApplyChanges();
+    Sym::verarbeite();
+    return $modul;
+}
+$tasten = function (array $e, array $k): array {
+    $raum = IPS_GetParent($k['Fahren']);
+    foreach (['T11', 'T12'] as $name) {
+        $GLOBALS['t'][$name] = Sym::knx($name, $raum, 1);
+        $GLOBALS['t'][$name . 'Led'] = Sym::knx($name . ' LED', $raum, 5);
+    }
+    $t = $GLOBALS['t'];
+    return [
+        'Verschattung' => true, 'EinstellungenID' => $k['Ordner'],
+        'TastenAutomatik' => json_encode([['Name' => 'Taste 11', 'VariableID' => Sym::wert($t['T11']), 'InstanceID' => $t['T11Led']]]),
+        'TastenVerschattung' => json_encode([['Name' => '', 'VariableID' => Sym::wert($t['T12']), 'InstanceID' => $t['T12Led']]])
+    ] + $e;
+};
+$leds = fn (int $ab): array => Sym::gesendet($ab, [$GLOBALS['t']['T11Led'], $GLOBALS['t']['T12Led']]);
+
+$t = [];
+[$m, $k, $a] = aufbau(['Anpassen' => $tasten]);
+$m->EinstellungenAnlegen();
+$ab = count(Sym::$telegramme);
+$m->ApplyChanges();
+Sym::verarbeite();
+gleich([$m->status, $m->GetValue('Automatik'), $m->GetValue('Verschattung')], [IS_ACTIVE, true, true], 'aktiv, beide Schalter da und an');
+gleich($leds($ab), ['T11 LED=3', 'T12 LED=3'], 'nach dem Übernehmen zeigen beide LEDs Grün');
+$ab = count(Sym::$telegramme);
+druecke($t['T11'], true);
+gleich([$m->GetValue('Automatik'), $m->GetValue('Grund'), $leds($ab)], [false, 'Automatik aus: Taste 11', ['T11 LED=2']], 'Taste 11: Automatik aus, LED Rot, Grund nennt die Taste');
+gleich(fahrten($k), [], 'die Taste fährt das Rollo nicht');
+$ab = count(Sym::$telegramme);
+druecke($t['T11'], true);
+gleich([$m->GetValue('Automatik'), $leds($ab)], [true, ['T11 LED=3']], 'derselbe Wert nochmal: jedes Telegramm zählt, Automatik an, LED Grün');
+$ab = count(Sym::$telegramme);
+druecke($t['T12'], false);
+gleich([$m->GetValue('Verschattung'), $m->GetValue('Automatik'), $leds($ab)], [false, true, ['T12 LED=2']], 'Taste 12: Verschattung aus, Automatik bleibt, LED Rot');
+pruefe(str_starts_with($m->GetValue('Grund'), 'Verschattung aus: Taste '), 'ohne Namen steht die Variable der Taste im Grund');
+$ab = count(Sym::$telegramme);
+$m->RequestAction('Automatik', false);
+Sym::verarbeite();
+gleich([$m->GetValue('Automatik'), $m->GetValue('Grund'), $leds($ab)], [false, 'Automatik aus: App', ['T11 LED=2']], 'aus der App: LED zieht nach');
+$ab = count(Sym::$telegramme);
+$m->MessageSink(0, 0, IPS_KERNELMESSAGE, [KR_READY]);
+Sym::weiter(60);
+gleich($leds($ab), ['T11 LED=2', 'T12 LED=2'], 'nach dem Start zeigen die LEDs den Stand der Schalter');
+
+titel('Eine Taste für zwei Rollos: angleichen');
+$t = [];
+[$m, $k, $a] = aufbau(['Anpassen' => $tasten]);
 $m->EinstellungenAnlegen();
 $m->ApplyChanges();
-gleich([$m->status, Sym::kind($m->InstanceID, 'Verschattung')], [IS_ACTIVE, 0], 'gewählter Schalter, den es nicht gibt: aktiv, kein eigener Schalter');
-pruefe(str_contains(end($m->log)[1], 'gibt es nicht'), 'das Log warnt vor dem fehlenden Schalter');
+// das zweite Rollo hat keine Verschattung und dieselbe Taste 11
+$m2 = zweites(['TastenAutomatik' => $m->eigenschaften['TastenAutomatik'], 'TastenVerschattung' => $m->eigenschaften['TastenVerschattung']]);
+gleich([$m2->status, Sym::kind($m2->InstanceID, 'Verschattung')], [IS_ACTIVE, 0], 'zweites Rollo aktiv, ohne Schalter Verschattung');
+$beide = fn (): array => [$m->GetValue('Automatik'), $m2->GetValue('Automatik')];
+druecke($t['T11'], true);
+gleich($beide(), [false, false], 'beide an, Taste: beide aus');
+gleich(end(Sym::$telegramme)['Wert'], 2, 'LED Rot');
+gleich($m2->GetValue('Grund'), 'Automatik aus: Taste 11', 'auch das zweite Rollo nennt die Taste im Grund');
+druecke($t['T11'], true);
+gleich($beide(), [true, true], 'beide aus, Taste: beide an');
+gleich(end(Sym::$telegramme)['Wert'], 3, 'LED Grün');
+$m2->RequestAction('Automatik', false);
+Sym::verarbeite();
+gleich([$beide(), end(Sym::$telegramme)['Wert']], [[true, false], 2], 'eines in der App aus: LED Rot, weil nicht alle an sind');
+druecke($t['T11'], true);
+gleich([$beide(), end(Sym::$telegramme)['Wert']], [[false, false], 2], 'verschieden, Taste: einer war an, also beide aus');
+$m->RequestAction('Automatik', true);
+Sym::verarbeite();
+gleich(end(Sym::$telegramme)['Wert'], 2, 'nur eines in der App an: LED bleibt Rot');
+$m2->RequestAction('Automatik', true);
+Sym::verarbeite();
+gleich(end(Sym::$telegramme)['Wert'], 3, 'beide an: LED Grün');
+druecke($t['T12'], true);
+gleich([$m->GetValue('Verschattung'), $beide()], [false, [true, true]], 'Taste 12 schaltet nur das Rollo mit Verschattung, das andere hat den Schalter nicht');
+gleich(end(Sym::$telegramme)['Wert'], 2, 'LED Taste 12 Rot');
+// das Rollo mit der kleineren ID ist gestört: das andere übernimmt die Taste
+$m->eigenschaften['StatusID'] = 0;
+$m->ApplyChanges();
+druecke($t['T11'], true);
+gleich($beide(), [true, false], 'ein inaktives Rollo zählt nicht mit: nur das andere schaltet');
+
+[$m, $k, $a] = aufbau(['Anpassen' => function (array $e, array $k): array {
+    return ['TastenAutomatik' => json_encode([['Name' => 'x', 'VariableID' => 99999, 'InstanceID' => 0]])] + $e;
+}]);
+gleich($m->status, 201, 'eine Taste, die es nicht gibt: Fehler 201');
+[$m, $k, $a] = aufbau(['Anpassen' => function (array $e, array $k): array {
+    return ['TastenAutomatik' => json_encode([['Name' => 'x', 'VariableID' => Sym::wert($k['TasteAuf']), 'InstanceID' => 0]]), 'TastenAufKurz' => '[]'] + $e;
+}]);
+druecke($k['TasteAuf'], true);
+gleich([$m->status, $m->GetValue('Automatik')], [IS_ACTIVE, false], 'Taste ohne LED: schaltet um');
 
 echo "\n" . $anzahl . ' Prüfungen, ' . $fehler . " Fehler\n";
 exit($fehler > 0 ? 1 : 0);

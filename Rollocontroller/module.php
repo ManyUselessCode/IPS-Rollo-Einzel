@@ -39,7 +39,8 @@ class Rollocontroller extends IPSModule
     private const OFFEN = 0;
     private const ZU = 100;
 
-    // Farben der MDT-LEDs (DPT 5): Grün fährt, Blau steht
+    // Farben der MDT-LEDs (DPT 5): Grün fährt, Blau steht. Bei den Tasten der Schalter: Grün an, Rot aus
+    private const LED_ROT = 2;
     private const LED_GRUEN = 3;
     private const LED_BLAU = 4;
 
@@ -65,6 +66,8 @@ class Rollocontroller extends IPSModule
         'MdtWippenKurz', 'MdtWippenLang', 'JungWippenKurz', 'JungWippenLang',
         'TastenAufKurz', 'TastenAbKurz', 'TastenAbLang'
     ];
+    // Tasten, die einen Schalter des Rollos umschalten: Liste => Ident des Schalters
+    private const SCHALTER_TASTEN = ['TastenAutomatik' => 'Automatik', 'TastenVerschattung' => 'Verschattung'];
     private const LED_LISTEN = ['MdtLedsAuf', 'MdtLedsAb', 'JungLedsBlau', 'JungLedsAufGruen', 'JungLedsAbGruen'];
 
     // Variablen der Wohnung im Ordner der Einstellungen, gesucht über ihren Ident.
@@ -91,11 +94,9 @@ class Rollocontroller extends IPSModule
         $this->RegisterPropertyFloat('Himmelsrichtung', 180.0);
         $this->RegisterPropertyBoolean('MorgensOeffnen', false);
         $this->RegisterPropertyBoolean('AbendsSchliessen', false);
-        $this->RegisterPropertyInteger('AutomatikID', 0);
         $this->RegisterPropertyBoolean('Verschattung', false);
         $this->RegisterPropertyInteger('Verschattungsposition', 80);
-        $this->RegisterPropertyInteger('VerschattungID', 0);
-        foreach (array_merge(self::TASTER_LISTEN, self::LED_LISTEN) as $liste) {
+        foreach (array_merge(self::TASTER_LISTEN, self::LED_LISTEN, array_keys(self::SCHALTER_TASTEN)) as $liste) {
             $this->RegisterPropertyString($liste, '[]');
         }
 
@@ -139,16 +140,12 @@ class Rollocontroller extends IPSModule
         }
         $this->RegisterMessage(0, IPS_KERNELMESSAGE);
 
-        // Eigene Schalter gibt es nur, wenn die Automatik sie braucht und keine andere Variable gewählt ist
-        $automatik = ($this->ReadPropertyBoolean('MorgensOeffnen') || $this->ReadPropertyBoolean('AbendsSchliessen'))
-            && $this->ReadPropertyInteger('AutomatikID') == 0;
-        $verschattung = $this->ReadPropertyBoolean('Verschattung') && $this->ReadPropertyInteger('VerschattungID') == 0;
-        $this->MaintainVariable('Automatik', 'Automatik', VARIABLETYPE_BOOLEAN, $this->Schalter('sunrise'), 4, $automatik);
+        // Den Schalter Automatik hat jedes Rollo, den Schalter Verschattung nur eines mit Verschattung
+        $verschattung = $this->ReadPropertyBoolean('Verschattung');
+        $this->MaintainVariable('Automatik', 'Automatik', VARIABLETYPE_BOOLEAN, $this->Schalter('sunrise'), 4, true);
         $this->MaintainVariable('Verschattung', 'Verschattung', VARIABLETYPE_BOOLEAN, $this->Schalter('sun'), 5, $verschattung);
-        if ($automatik) {
-            $this->EnableAction('Automatik');
-            $this->Vorgabe('Automatik', true);
-        }
+        $this->EnableAction('Automatik');
+        $this->Vorgabe('Automatik', true);
         if ($verschattung) {
             $this->EnableAction('Verschattung');
             $this->Vorgabe('Verschattung', true);
@@ -174,6 +171,9 @@ class Rollocontroller extends IPSModule
         }
 
         // Taster: jedes Telegramm zählt als Druck
+        if ($this->SchalterTasteGedrueckt($SenderID)) {
+            return;
+        }
         if ($this->TasterGedrueckt($SenderID, (bool) $Data[0])) {
             return;
         }
@@ -206,7 +206,7 @@ class Rollocontroller extends IPSModule
         if (!$Data[1]) {
             return; // alles andere nur, wenn sich der Wert geändert hat
         }
-        if ($SenderID == $this->ReadPropertyInteger('VerschattungID') || in_array($SenderID, $this->SonneVariablen(), true)) {
+        if (in_array($SenderID, $this->SonneVariablen(), true)) {
             $this->SonnePruefen();
             return;
         }
@@ -235,13 +235,16 @@ class Rollocontroller extends IPSModule
                 $this->SperreSchalten((bool) $Value, 'App');
                 break;
             case 'Automatik':
-                $this->SetValue('Automatik', (bool) $Value);
-                $this->Grund('Automatik ' . ($Value ? 'an' : 'aus') . ': App');
-                break;
             case 'Verschattung':
-                $this->SetValue('Verschattung', (bool) $Value);
-                $this->Grund('Verschattung ' . ($Value ? 'an' : 'aus') . ': App');
-                $this->SonnePruefen();
+                $this->SchalterSetzen($Ident, (bool) $Value, 'App');
+                break;
+            case 'SchalterTaste':
+                // ein anderes Rollo mit derselben Taste gleicht diesen Schalter an
+                $auftrag = json_decode((string) $Value, true);
+                if (!is_array($auftrag) || !in_array($auftrag['Ident'] ?? '', self::SCHALTER_TASTEN, true)) {
+                    throw new Exception('Unbekannter Schalter: ' . $Value);
+                }
+                $this->SchalterSetzen($auftrag['Ident'], (bool) $auftrag['Wert'], (string) $auftrag['Quelle']);
                 break;
             case 'StartSchritt':
                 $this->StartSchritt();
@@ -374,19 +377,13 @@ class Rollocontroller extends IPSModule
                 $this->RegisterMessage($this->EinstellungVariable($ident), VM_UPDATE);
             }
         }
-        foreach (['AutomatikID' => 'Automatik', 'VerschattungID' => 'Verschattung'] as $eigenschaft => $name) {
-            $id = $this->ReadPropertyInteger($eigenschaft);
-            if ($id == 0) {
-                continue;
-            }
-            if (!IPS_VariableExists($id)) {
-                // wie im Blueprint: ein Schalter, den es nicht gibt, gibt die Automatik frei
-                $this->LogMessage('Den Schalter ' . $name . ' ' . $id . ' gibt es nicht, das Rollo fährt wie ohne Schalter.', KL_WARNING);
-                continue;
-            }
-            $this->RegisterReference($id);
-            if ($eigenschaft == 'VerschattungID') {
-                $this->RegisterMessage($id, VM_UPDATE);
+        foreach (array_keys(self::SCHALTER_TASTEN) as $liste) {
+            foreach ($this->Liste($liste) as $taste) {
+                $this->RegisterMessage($taste['VariableID'], VM_UPDATE);
+                $this->RegisterReference($taste['VariableID']);
+                if (($taste['InstanceID'] ?? 0) > 0) {
+                    $this->RegisterReference($taste['InstanceID']);
+                }
             }
         }
         if ($this->ReadPropertyBoolean('Verschattung')) {
@@ -441,6 +438,18 @@ class Rollocontroller extends IPSModule
                 }
             }
         }
+        foreach (array_keys(self::SCHALTER_TASTEN) as $liste) {
+            foreach ($this->Liste($liste) as $taste) {
+                if (!IPS_VariableExists($taste['VariableID'])) {
+                    $falsch[] = 'Taste ' . $taste['VariableID'];
+                } elseif (in_array($taste['VariableID'], $rollo, true)) {
+                    $falsch[] = 'Taste ' . $taste['VariableID'] . ' ist eine Adresse des Rollos';
+                }
+                if (($taste['InstanceID'] ?? 0) > 0 && !IPS_InstanceExists($taste['InstanceID'])) {
+                    $falsch[] = 'LED ' . $taste['InstanceID'];
+                }
+            }
+        }
         if ($this->BrauchtEinstellungen()) {
             foreach (array_keys($this->Einstellungen()) as $ident) {
                 if ($this->EinstellungVariable($ident) == 0) {
@@ -463,6 +472,7 @@ class Rollocontroller extends IPSModule
         $this->SetValue('Sperre', $this->Gesperrt());
         $this->PositionZeigen();
         $this->LedsSetzen(true);
+        $this->SchalterLedsSetzen();
 
         $sonne = $this->SonneAufFenster();
         $this->SetBuffer('Sonne', $sonne ? '1' : '0');
@@ -503,6 +513,112 @@ class Rollocontroller extends IPSModule
     }
 
     // ------------------------------------------------------------------ Taster und Befehle
+
+    /**
+     * Eine Taste aus "Tasten Automatik" oder "Tasten Verschattung" schaltet den Schalter um.
+     * Haben mehrere Rollos dieselbe Taste, gleicht sie an: Ist einer ihrer Schalter an, gehen
+     * alle aus, sonst alle an. Damit das genau einmal passiert, handelt nur das Rollo mit der
+     * kleinsten ID und setzt die Schalter der anderen mit.
+     */
+    private function SchalterTasteGedrueckt(int $sender): bool
+    {
+        $getroffen = false;
+        foreach (self::SCHALTER_TASTEN as $liste => $ident) {
+            foreach ($this->Liste($liste) as $taste) {
+                if ($taste['VariableID'] != $sender) {
+                    continue;
+                }
+                $getroffen = true;
+                $gruppe = $this->SchalterGruppe($liste, $sender);
+                if (count($gruppe) == 0 || min(array_keys($gruppe)) != $this->InstanceID) {
+                    break;
+                }
+                $name = trim((string) ($taste['Name'] ?? ''));
+                if ($name == '') {
+                    $name = 'Taste ' . $sender;
+                }
+                $ziel = !in_array(true, $gruppe, true);
+                foreach (array_keys($gruppe) as $instanz) {
+                    if ($instanz != $this->InstanceID) {
+                        IPS_RequestAction($instanz, 'SchalterTaste', json_encode(['Ident' => $ident, 'Wert' => $ziel, 'Quelle' => $name]));
+                    }
+                }
+                $this->SchalterSetzen($ident, $ziel, $name);
+                break;
+            }
+        }
+        return $getroffen;
+    }
+
+    /**
+     * Die Rollos, deren Schalter $liste dieselbe Taste hat, mit dem Stand ihres Schalters:
+     * Instanz => an. Dieses Rollo gehört dazu, wenn es den Schalter hat.
+     */
+    private function SchalterGruppe(string $liste, int $taste): array
+    {
+        $ident = self::SCHALTER_TASTEN[$liste];
+        $gruppe = [];
+        foreach (IPS_GetInstanceListByModuleID(IPS_GetInstance($this->InstanceID)['ModuleInfo']['ModuleID']) as $instanz) {
+            if ($instanz != $this->InstanceID) {
+                if (IPS_GetInstance($instanz)['InstanceStatus'] != IS_ACTIVE) {
+                    continue;
+                }
+                $zeilen = json_decode((string) @IPS_GetProperty($instanz, $liste), true) ?: [];
+                if (!in_array($taste, array_column($zeilen, 'VariableID'), true)) {
+                    continue;
+                }
+            }
+            $schalter = @IPS_GetObjectIDByIdent($ident, $instanz);
+            if ($schalter !== false) {
+                $gruppe[$instanz] = (bool) GetValue($schalter);
+            }
+        }
+        return $gruppe;
+    }
+
+    /**
+     * Setzt den Schalter Automatik oder Verschattung, aus der App oder von einer Taste.
+     */
+    private function SchalterSetzen(string $ident, bool $an, string $quelle): void
+    {
+        if (@IPS_GetObjectIDByIdent($ident, $this->InstanceID) === false) {
+            return; // ein Rollo ohne Verschattung hat den Schalter nicht
+        }
+        if ($this->GetValue($ident) !== $an || $quelle == 'App') {
+            $this->SetValue($ident, $an);
+            $this->Grund($ident . ' ' . ($an ? 'an' : 'aus') . ': ' . $quelle);
+            if ($ident == 'Verschattung') {
+                $this->SonnePruefen();
+            }
+        }
+        $this->SchalterLedsSetzen($ident);
+    }
+
+    /**
+     * Die LED einer Schalter-Taste zeigt den Schalter: Grün an, Rot aus. Teilen sich mehrere
+     * Rollos die Taste, ist sie nur Grün, wenn alle ihre Schalter an sind.
+     */
+    private function SchalterLedsSetzen(string $nur = ''): void
+    {
+        if ($this->GetStatus() != IS_ACTIVE) {
+            return;
+        }
+        foreach (self::SCHALTER_TASTEN as $liste => $ident) {
+            if ($nur != '' && $nur != $ident) {
+                continue;
+            }
+            foreach ($this->Liste($liste) as $taste) {
+                if (($taste['InstanceID'] ?? 0) == 0) {
+                    continue;
+                }
+                $gruppe = $this->SchalterGruppe($liste, $taste['VariableID']);
+                if (!isset($gruppe[$this->InstanceID])) {
+                    continue;
+                }
+                @KNX_WriteDPT5($taste['InstanceID'], in_array(false, $gruppe, true) ? self::LED_ROT : self::LED_GRUEN);
+            }
+        }
+    }
 
     /**
      * Wippen senden die Richtung im Wert: MDT oben = aus = auf und unten = an = ab,
@@ -1092,26 +1208,21 @@ class Rollocontroller extends IPSModule
 
     private function AutomatikFrei(): bool
     {
-        return $this->Freigabe('AutomatikID', 'Automatik');
+        return $this->Freigabe('Automatik');
     }
 
     private function VerschattungFrei(): bool
     {
-        return $this->Freigabe('VerschattungID', 'Verschattung');
+        return $this->Freigabe('Verschattung');
     }
 
     /**
-     * Gilt die gewählte Variable oder der eigene Schalter des Rollos. Nur aus sperrt:
-     * Ohne Schalter oder mit einem, den es nicht mehr gibt, ist die Automatik frei.
+     * Der Schalter des Rollos. Nur aus sperrt.
      */
-    private function Freigabe(string $eigenschaft, string $ident): bool
+    private function Freigabe(string $ident): bool
     {
-        $id = $this->ReadPropertyInteger($eigenschaft);
-        if ($id == 0) {
-            $eigen = @IPS_GetObjectIDByIdent($ident, $this->InstanceID);
-            $id = $eigen === false ? 0 : $eigen;
-        }
-        return $id == 0 || !IPS_VariableExists($id) || (bool) GetValue($id);
+        $id = @IPS_GetObjectIDByIdent($ident, $this->InstanceID);
+        return $id === false || (bool) GetValue($id);
     }
 
     /**

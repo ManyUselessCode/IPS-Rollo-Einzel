@@ -92,10 +92,26 @@
           "type": "Label",
           "caption": "Fährt zu zum Zeitpunkt in der Variable Runter heute, wenn Automatik Runter der Wohnung an ist, sonst wie Morgens öffnen."
         },
-        { "type": "SelectVariable", "name": "AutomatikID", "caption": "Schalter Automatik (optional, Variable)" },
         {
           "type": "Label",
-          "caption": "Leer: Das Rollo bekommt einen eigenen Schalter Automatik. Mit ihm legt man je Rollo fest, ob es automatisch fährt: Aus heißt, das Rollo folgt den beiden Zeitpunkten nicht. Für einen Schalter je Raum hier die Variable wählen, zum Beispiel den Schalter Automatik eines anderen Rollos. Gibt es die gewählte Variable nicht mehr, fährt das Rollo wie ohne Schalter. Taster, Lüften, Verschattung und Sperre sind nicht betroffen."
+          "caption": "Jedes Rollo hat den Schalter Automatik. Mit ihm legt man je Rollo fest, ob es automatisch fährt: Aus heißt, das Rollo folgt den beiden Zeitpunkten nicht. Taster, Lüften, Verschattung und Sperre sind nicht betroffen."
+        },
+        {
+          "type": "List",
+          "name": "TastenAutomatik",
+          "caption": "Tasten Automatik (jedes Telegramm schaltet den Schalter Automatik um, LED Grün = an, Rot = aus)",
+          "rowCount": 2,
+          "add": true,
+          "delete": true,
+          "columns": [
+            { "caption": "Name (steht im Grund)", "name": "Name", "width": "30%", "add": "", "edit": { "type": "ValidationTextBox" } },
+            { "caption": "Taste Kurz (Variable)", "name": "VariableID", "width": "auto", "add": 0, "edit": { "type": "SelectVariable" } },
+            { "caption": "MDT LED Farbe (Instanz, optional)", "name": "InstanceID", "width": "35%", "add": 0, "edit": { "type": "SelectInstance", "validModules": ["{EBD0EE8D-DFA5-449F-BBE4-49CFC5F0EEB4}"] } }
+          ]
+        },
+        {
+          "type": "Label",
+          "caption": "Haben mehrere Rollos dieselbe Taste, gleicht sie an: Ist einer der Schalter an, gehen alle aus, sonst alle an. Die LED ist nur Grün, wenn alle an sind. Taste und LED dann bei jedem dieser Rollos eintragen."
         },
         { "type": "CheckBox", "name": "Verschattung", "caption": "Verschattung" },
         {
@@ -110,10 +126,22 @@
           "minimum": 0,
           "maximum": 100
         },
-        { "type": "SelectVariable", "name": "VerschattungID", "caption": "Schalter Verschattung (optional, Variable)" },
         {
           "type": "Label",
-          "caption": "Leer: Das Rollo bekommt einen eigenen Schalter Verschattung. Aus heißt keine Verschattung, ein gerade verschattetes Rollo bleibt stehen, und Morgens öffnen fährt ganz auf. Für einen Schalter je Raum hier die Variable wählen."
+          "caption": "Mit Verschattung bekommt das Rollo den Schalter Verschattung. Aus heißt keine Verschattung, ein gerade verschattetes Rollo bleibt stehen, und Morgens öffnen fährt ganz auf."
+        },
+        {
+          "type": "List",
+          "name": "TastenVerschattung",
+          "caption": "Tasten Verschattung (wie Tasten Automatik, für den Schalter Verschattung)",
+          "rowCount": 2,
+          "add": true,
+          "delete": true,
+          "columns": [
+            { "caption": "Name (steht im Grund)", "name": "Name", "width": "30%", "add": "", "edit": { "type": "ValidationTextBox" } },
+            { "caption": "Taste Kurz (Variable)", "name": "VariableID", "width": "auto", "add": 0, "edit": { "type": "SelectVariable" } },
+            { "caption": "MDT LED Farbe (Instanz, optional)", "name": "InstanceID", "width": "35%", "add": 0, "edit": { "type": "SelectInstance", "validModules": ["{EBD0EE8D-DFA5-449F-BBE4-49CFC5F0EEB4}"] } }
+          ]
         }
       ]
     },
