@@ -12,6 +12,8 @@ Wann die Rollos morgens und abends fahren, rechnet nicht das Modul. Ein Skript s
 |---|---|---|---|
 | `RaufHeute` | Rauf heute | Zeitpunkt, zu dem die Rollos heute auffahren | 0 |
 | `RunterHeute` | Runter heute | Zeitpunkt, zu dem die Rollos heute zufahren | 0 |
+| `AutomatikRauf` | Automatik Rauf | gibt Morgens öffnen für alle Rollos frei | an |
+| `AutomatikRunter` | Automatik Runter | gibt Abends schließen für alle Rollos frei | an |
 | `AutomatikVerschattung` | Automatik Verschattung | gibt die Verschattung für alle Rollos frei | an |
 | `Oeffnungswinkel` | Öffnungswinkel | Grad links und rechts der Himmelsrichtung, in denen die Sonne aufs Fenster scheint | 80 |
 | `Mindesthoehe` | Mindest-Sonnenhöhe | Grad über dem Horizont, ab denen verschattet wird | 10 |
@@ -69,6 +71,7 @@ Gesperrt wird ein Rollo, indem „Sperren“ gesetzt wird, aus der App über die
 - **Es wird nie nachgeholt.** Gefahren wird nur in dem Moment, in dem der Zeitpunkt erreicht ist. Ein Zeitpunkt, der beim Schreiben oder nach einem Neustart schon vorbei ist, bleibt ohne Wirkung, ebenso einer von gestern.
 - Jeder Zeitpunkt gilt einmal.
 - Mit dem Schalter „Automatik“ legt man für jedes Rollo fest, ob es automatisch fährt. Aus heißt, das Rollo folgt den Zeitpunkten nicht. Wird er nach dem Zeitpunkt wieder eingeschaltet, fährt das Rollo erst beim nächsten.
+- „Automatik Rauf“ und „Automatik Runter“ der Wohnung gelten für alle Rollos: Morgens fährt ein Rollo nur, wenn „Automatik Rauf“ der Wohnung und „Automatik“ des Rollos an sind, abends nur mit „Automatik Runter“ und „Automatik“. Die Verschattung bleibt davon unberührt.
 - Ein gesperrtes Rollo fährt nicht. Der Grund sagt, warum ein Rollo zum Zeitpunkt nicht gefahren ist.
 
 ## Verschattung

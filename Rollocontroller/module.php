@@ -8,8 +8,9 @@ declare(strict_types=1);
  * Himmelsrichtung und die Automatik (Morgens öffnen, Abends schließen, Verschattung nach
  * Sonnenstand). Dazu optional eigene Taster und LEDs, die nur dieses Rollo bedienen.
  * Wann die Rollos morgens und abends fahren, gibt die Wohnung in den zwei Variablen
- * "Rauf heute" und "Runter heute" vor, die ein Skript schreibt. Sie liegen mit dem Schalter,
- * dem Öffnungswinkel und der Mindest-Sonnenhöhe der Verschattung in einem gemeinsamen Ordner.
+ * "Rauf heute" und "Runter heute" vor, die ein Skript schreibt. Die Schalter "Automatik Rauf" und
+ * "Automatik Runter" der Wohnung geben die beiden Fahrten für alle Rollos frei. Sie liegen mit dem
+ * Schalter, dem Öffnungswinkel und der Mindest-Sonnenhöhe der Verschattung in einem gemeinsamen Ordner.
  *
  * Positionen sind Prozent geschlossen wie am Aktor und in Symcon: 0 = ganz offen, 100 = zu.
  * Die Position kommt aus der Status-Variable, nie aus einer Befehlsinstanz.
@@ -966,7 +967,7 @@ class Rollocontroller extends IPSModule
 
     private function MorgensAusfuehren(): void
     {
-        $hindernis = $this->AutomatikHindernis();
+        $hindernis = $this->AutomatikHindernis('AutomatikRauf', 'Rauf');
         if ($hindernis != '') {
             $this->Grund('Morgens nicht geöffnet: ' . $hindernis);
             return;
@@ -985,7 +986,7 @@ class Rollocontroller extends IPSModule
 
     private function AbendsAusfuehren(): void
     {
-        $hindernis = $this->AutomatikHindernis();
+        $hindernis = $this->AutomatikHindernis('AutomatikRunter', 'Runter');
         if ($hindernis != '') {
             $this->Grund('Abends nicht geschlossen: ' . $hindernis);
             return;
@@ -1000,13 +1001,20 @@ class Rollocontroller extends IPSModule
      * Zum Zeitpunkt fährt das Rollo nur, wenn es nicht gesperrt ist und sein Schalter
      * Automatik nicht aus ist. Mit dem Schalter legt man je Rollo fest, ob es automatisch fährt.
      */
-    private function AutomatikHindernis(): string
+    /**
+     * Warum das Rollo zum Zeitpunkt nicht fährt, oder leer. Der Schalter der Wohnung ($schalter,
+     * Automatik Rauf oder Automatik Runter) gilt für alle Rollos, der Schalter Automatik nur für dieses.
+     */
+    private function AutomatikHindernis(string $schalter, string $name): string
     {
         if ($this->Gesperrt()) {
             return 'gesperrt';
         }
         if (!$this->AutomatikFrei()) {
             return 'Automatik ist aus';
+        }
+        if (!$this->Einstellung($schalter, true)) {
+            return 'Automatik ' . $name . ' der Wohnung ist aus';
         }
         return '';
     }
@@ -1163,6 +1171,8 @@ class Rollocontroller extends IPSModule
         return [
             'RaufHeute'             => ['Name' => 'Rauf heute'] + $zeitpunkt,
             'RunterHeute'           => ['Name' => 'Runter heute'] + $zeitpunkt,
+            'AutomatikRauf'         => ['Name' => 'Automatik Rauf', 'Typ' => VARIABLETYPE_BOOLEAN, 'Vorgabe' => true, 'Darstellung' => $this->Schalter('sunrise')],
+            'AutomatikRunter'       => ['Name' => 'Automatik Runter', 'Typ' => VARIABLETYPE_BOOLEAN, 'Vorgabe' => true, 'Darstellung' => $this->Schalter('sunset')],
             'AutomatikVerschattung' => ['Name' => 'Automatik Verschattung', 'Typ' => VARIABLETYPE_BOOLEAN, 'Vorgabe' => true, 'Darstellung' => $this->Schalter('sun')],
             'Oeffnungswinkel'       => ['Name' => 'Öffnungswinkel', 'Typ' => VARIABLETYPE_INTEGER, 'Vorgabe' => 80, 'Darstellung' => $this->Regler(0, 180, 5, '°', 'angle')],
             'Mindesthoehe'          => ['Name' => 'Mindest-Sonnenhöhe', 'Typ' => VARIABLETYPE_INTEGER, 'Vorgabe' => 10, 'Darstellung' => $this->Regler(0, 90, 1, '°', 'arrow-up')]

@@ -3,7 +3,7 @@
     { "type": "SelectCategory", "name": "EinstellungenID", "caption": "Ordner mit den Variablen der Wohnung" },
     {
       "type": "Label",
-      "caption": "Die Zeitpunkte Rauf heute und Runter heute, der Schalter der Verschattung, Öffnungswinkel und Mindest-Sonnenhöhe gelten für alle Rollos und liegen als Variablen in diesem Ordner. Nötig ist er nur für Morgens öffnen, Abends schließen und Verschattung. Fehlende Variablen legt die Schaltfläche unten an."
+      "caption": "Die Zeitpunkte Rauf heute und Runter heute, die Schalter Automatik Rauf, Automatik Runter und Automatik Verschattung, Öffnungswinkel und Mindest-Sonnenhöhe gelten für alle Rollos und liegen als Variablen in diesem Ordner. Nötig ist er nur für Morgens öffnen, Abends schließen und Verschattung. Fehlende Variablen legt die Schaltfläche unten an."
     },
     {
       "type": "ExpansionPanel",
@@ -85,12 +85,12 @@
         { "type": "CheckBox", "name": "MorgensOeffnen", "caption": "Morgens öffnen" },
         {
           "type": "Label",
-          "caption": "Fährt ganz auf zum Zeitpunkt in der Variable Rauf heute. Steht dort 0, fährt das Rollo heute nicht. Ein Zeitpunkt, der schon vorbei ist, wird nie nachgeholt."
+          "caption": "Fährt ganz auf zum Zeitpunkt in der Variable Rauf heute, wenn Automatik Rauf der Wohnung an ist. Steht dort 0, fährt das Rollo heute nicht. Ein Zeitpunkt, der schon vorbei ist, wird nie nachgeholt."
         },
         { "type": "CheckBox", "name": "AbendsSchliessen", "caption": "Abends schließen" },
         {
           "type": "Label",
-          "caption": "Fährt zu zum Zeitpunkt in der Variable Runter heute, sonst wie Morgens öffnen."
+          "caption": "Fährt zu zum Zeitpunkt in der Variable Runter heute, wenn Automatik Runter der Wohnung an ist, sonst wie Morgens öffnen."
         },
         { "type": "SelectVariable", "name": "AutomatikID", "caption": "Schalter Automatik (optional, Variable)" },
         {

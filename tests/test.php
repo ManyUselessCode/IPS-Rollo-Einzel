@@ -253,7 +253,7 @@ gleich(Sym::kinder($k['Ordner']), [], 'das Modul legt von selbst nichts im Ordne
 $m->EinstellungenAnlegen();
 $m->ApplyChanges();
 gleich($m->status, IS_ACTIVE, 'nach dem Anlegen der Variablen aktiv');
-$erwartet = ['RaufHeute' => 0, 'RunterHeute' => 0, 'AutomatikVerschattung' => true, 'Oeffnungswinkel' => 80, 'Mindesthoehe' => 10];
+$erwartet = ['RaufHeute' => 0, 'RunterHeute' => 0, 'AutomatikRauf' => true, 'AutomatikRunter' => true, 'AutomatikVerschattung' => true, 'Oeffnungswinkel' => 80, 'Mindesthoehe' => 10];
 $ist = [];
 $skript = Sym::kind($k['Ordner'], 'WertUebernehmen');
 foreach (Sym::kinder($k['Ordner']) as $id) {
@@ -262,10 +262,10 @@ foreach (Sym::kinder($k['Ordner']) as $id) {
         pruefe(Sym::$variablen[$id]['Aktion'] == $skript && isset(Sym::$variablen[$id]['Darstellung']['PRESENTATION']), 'Variable ' . Sym::$objekte[$id]['Name'] . ' hat Aktionsskript und Darstellung');
     }
 }
-gleich($ist, $erwartet, 'fünf Variablen mit Vorgaben, beide Zeitpunkte 0 = heute nicht');
+gleich($ist, $erwartet, 'sieben Variablen mit Vorgaben, beide Zeitpunkte 0 = heute nicht');
 pruefe($skript > 0 && Sym::$objekte[$skript]['Hidden'] && str_contains(Sym::$skripte[$skript], "SetValue(\$_IPS['VARIABLE'], \$_IPS['VALUE']);"), 'verstecktes Aktionsskript übernimmt den Wert');
 $sonneZeit = array_merge((new ReflectionClassConstant('Rollocontroller', 'EINSTELLUNGEN_SONNE'))->getValue(), array_keys((new ReflectionClassConstant('Rollocontroller', 'ZEITPUNKTE'))->getValue()));
-gleich([array_diff($sonneZeit, array_keys($erwartet)), array_diff(array_keys($erwartet), $sonneZeit)], [[], []], 'das Modul überwacht genau diese Variablen');
+gleich([array_diff($sonneZeit, array_keys($erwartet)), array_values(array_diff(array_keys($erwartet), $sonneZeit))], [[], ['AutomatikRauf', 'AutomatikRunter']], 'das Modul überwacht die Zeitpunkte und die Sonnenwerte, die Wohnungsschalter Rauf und Runter liest es erst zum Zeitpunkt');
 Sym::setze(Sym::kind($k['Ordner'], 'Oeffnungswinkel'), 45);
 $anzahlObjekte = count(Sym::$objekte);
 $m->EinstellungenAnlegen();
@@ -677,6 +677,25 @@ gleich(fahrten($k), ['Tue 16:49:05 ab'], 'abends fährt das Rollo wieder mit');
 [$m, $k, $a] = aufbau(['Start' => 0] + $nacht + ['Werte' => $tag]);
 Sym::lauf(zeit('2026-11-10 12:00:00'));
 gleich(fahrten($k), [], 'schon offen: Morgens sendet nichts');
+
+titel('Wohnung: Automatik Rauf und Automatik Runter');
+[$m, $k, $a] = aufbau(['Start' => 50] + $nacht + ['Werte' => $tag + ['AutomatikRauf' => false]]);
+Sym::lauf(zeit('2026-11-10 12:00:00'));
+gleich([fahrten($k), $m->GetValue('Grund')], [[], 'Morgens nicht geöffnet: Automatik Rauf der Wohnung ist aus'], 'Automatik Rauf der Wohnung aus: Morgens fährt nicht');
+Sym::lauf(zeit('2026-11-10 23:00:00'));
+gleich(fahrten($k), ['Tue 16:49:05 ab'], 'Abends fährt trotzdem, Automatik Runter ist an');
+[$m, $k, $a] = aufbau($nacht + ['Werte' => $tag + ['AutomatikRunter' => false]]);
+Sym::lauf(zeit('2026-11-10 23:00:00'));
+gleich([fahrten($k), $m->GetValue('Grund')], [['Tue 08:00:00 auf'], 'Abends nicht geschlossen: Automatik Runter der Wohnung ist aus'], 'Automatik Runter der Wohnung aus: Morgens fährt, Abends nicht');
+[$m, $k, $a] = aufbau($nacht + ['Werte' => $tag]);
+Sym::lauf(zeit('2026-11-10 07:00:00'));
+wohnung($k, 'AutomatikRauf', false);
+Sym::lauf(zeit('2026-11-10 08:30:00'));
+wohnung($k, 'AutomatikRauf', true);
+Sym::lauf(zeit('2026-11-10 12:00:00'));
+gleich(fahrten($k), [], 'Automatik Rauf der Wohnung nach dem Zeitpunkt wieder an: nichts nachgeholt');
+[$m, $k, $a] = aufbau(['Zeit' => '2026-11-10 12:00:00', 'Start' => 0, 'Wohnung' => true, 'Eigenschaften' => ['Verschattung' => true] + $automatik, 'Werte' => $tag + ['AutomatikRauf' => false, 'AutomatikRunter' => false], 'Sonne' => [180.0, 30.0]]);
+gleich(fahrten($k, 0, ''), [' Position 80'], 'Verschattung ist unabhängig von Automatik Rauf und Automatik Runter der Wohnung');
 
 titel('Über Mitternacht und mehrere Tage');
 [$m, $k, $a] = aufbau(['Zeit' => '2026-11-10 12:00:00', 'Start' => 0, 'Wohnung' => true, 'Eigenschaften' => $automatik, 'Werte' => ['RunterHeute' => $um('00:50:00', '2026-11-11')]]);
