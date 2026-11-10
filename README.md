@@ -85,7 +85,7 @@ Die Sonne scheint aufs Fenster, wenn sie höchstens um den Öffnungswinkel links
 
 ## Fahrt und Position
 
-Die Position kommt aus der Status-Variable. Der Aktor meldet nicht, ob das Rollo fährt. Das Modul leitet es aus den Telegrammen auf den Adressen des Rollos ab, auch aus denen anderer Geräte: Ein Fahrbefehl beginnt die Fahrt, ein Stopp oder die neue Position vom Aktor beendet sie. Bleibt die Meldung aus, endet die Fahrt nach der doppelten Fahrzeit. Unterwegs zeigt „Position“ das Ziel, nach einem Stopp die geschätzte Position, bis der Aktor die echte meldet. Solange der Aktor nichts gemeldet hat, spart das Modul keine Fahrt ein und gibt jeden Stopp weiter. Fährt jemand das Rollo von außen, steht „von Extern“ im Grund.
+Die Position kommt aus der Status-Variable. Ein eigenes Telegramm liefert Symcon zweimal an die Instanz, beim Schreiben und vom Bus zurück; das Modul zählt beide als eigene, solange der Wert stimmt. Der Aktor meldet nicht, ob das Rollo fährt. Das Modul leitet es aus den Telegrammen auf den Adressen des Rollos ab, auch aus denen anderer Geräte: Ein Fahrbefehl beginnt die Fahrt, ein Stopp oder die neue Position vom Aktor beendet sie. Bleibt die Meldung aus, endet die Fahrt nach der doppelten Fahrzeit. Unterwegs zeigt „Position“ das Ziel, nach einem Stopp die geschätzte Position, bis der Aktor die echte meldet. Solange der Aktor nichts gemeldet hat, spart das Modul keine Fahrt ein und gibt jeden Stopp weiter. Fährt jemand das Rollo von außen, steht „von Extern“ im Grund.
 
 ## Start
 

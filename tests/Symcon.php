@@ -162,6 +162,10 @@ final class Sym
      * Telegramm auf die Adresse einer KNX-Instanz: Die Instanz führt ihre Variable nach,
      * und ein Gerät am Bus reagiert. $extern heißt, ein anderes Gerät hat gesendet.
      */
+    // Wie die Anlage: ein eigenes Telegramm kommt zweimal an, beim Schreiben und vom Bus zurück.
+    // OHNE_ECHO=1 in der Umgebung schaltet das ab.
+    public static bool $echo = true;
+
     public static function telegramm(int $instanz, $wert, bool $extern = true): bool
     {
         if (!isset(self::$instanzen[$instanz])) {
@@ -170,6 +174,9 @@ final class Sym
         }
         self::$telegramme[] = ['Zeit' => self::$jetzt, 'Instanz' => $instanz, 'Name' => self::$objekte[$instanz]['Name'], 'Wert' => $wert, 'Extern' => $extern];
         self::setze(self::wert($instanz), $wert);
+        if (!$extern && self::$echo) {
+            self::setze(self::wert($instanz), $wert);
+        }
         if (isset(self::$bus[$instanz])) {
             (self::$bus[$instanz])($wert);
         }

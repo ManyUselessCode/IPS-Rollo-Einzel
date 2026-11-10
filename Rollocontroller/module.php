@@ -47,7 +47,7 @@ class Rollocontroller extends IPSModule
 
     private const STATUS_FEHLER = 201;
     private const STATUS_KEINE_EINSTELLUNGEN = 202;
-    private const BEFEHL_SPERRE_S = 5;      // so lange zählt ein Telegramm als eigenes
+    private const BEFEHL_SPERRE_S = 5;      // so lange zählt ein Telegramm mit dem Wert des eigenen Befehls als eigenes
     private const START_WARTEN_MS = 30000;  // Gateway und Bus nach dem Start abwarten
     private const ANTWORT_WARTEN_MS = 5000; // Zeit für die Antwort auf die Leseanfrage
     private const TOLERANZ = 2;             // Prozentpunkte, in denen eine Position als erreicht gilt
@@ -180,22 +180,22 @@ class Rollocontroller extends IPSModule
 
         // Telegramme auf den Adressen des Rollos, vom Modul selbst oder von anderen am Bus
         if ($SenderID == $this->WertVariable('FahrenID')) {
-            $this->FahrbefehlGesehen($Data[0] ? self::ZU : self::OFFEN, $this->EigenesTelegramm('FahrenID')); // DPT 1.008: an = ab
+            $this->FahrbefehlGesehen($Data[0] ? self::ZU : self::OFFEN, $this->EigenesTelegramm('FahrenID', (bool) $Data[0])); // DPT 1.008: an = ab
             return;
         }
         if ($SenderID == $this->WertVariable('PositionID')) {
-            $this->FahrbefehlGesehen($this->Begrenzen((int) $Data[0]), $this->EigenesTelegramm('PositionID'));
+            $this->FahrbefehlGesehen($this->Begrenzen((int) $Data[0]), $this->EigenesTelegramm('PositionID', $this->Begrenzen((int) $Data[0])));
             return;
         }
         if ($SenderID == $this->WertVariable('StoppID')) {
-            if (!$this->EigenesTelegramm('StoppID') && $this->Fahrt() != self::FAHRT_STEHT) {
+            if (!$this->EigenesTelegramm('StoppID', (bool) $Data[0]) && $this->Fahrt() != self::FAHRT_STEHT) {
                 $this->Grund('Stopp: von Extern');
             }
             $this->FahrtEndet();
             return;
         }
         if ($SenderID == $this->WertVariable('SperrenID')) {
-            $this->SperreGemeldet((bool) $Data[0], (bool) $Data[1], $this->EigenesTelegramm('SperrenID'));
+            $this->SperreGemeldet((bool) $Data[0], (bool) $Data[1], $this->EigenesTelegramm('SperrenID', (bool) $Data[0]));
             return;
         }
         if ($SenderID == $this->ReadPropertyInteger('StatusID')) {
@@ -634,7 +634,7 @@ class Rollocontroller extends IPSModule
         if ($this->GetStatus() != IS_ACTIVE) {
             return;
         }
-        $this->SetBuffer('BefehlSperrenID', (string) time());
+        $this->BefehlMerken('SperrenID', $an);
         $this->Grund('Sperre ' . ($an ? 'an' : 'aus') . ': ' . $quelle);
         if (!@KNX_WriteDPT1($this->ReadPropertyInteger('SperrenID'), $an)) {
             $this->LogMessage('Sperre schalten fehlgeschlagen: ' . $this->ReadPropertyInteger('SperrenID'), KL_ERROR);
@@ -648,7 +648,7 @@ class Rollocontroller extends IPSModule
      */
     private function Fahren(int $ziel, string $grund): void
     {
-        $this->SetBuffer('BefehlFahrenID', (string) time());
+        $this->BefehlMerken('FahrenID', $ziel == self::ZU);
         $this->Grund($grund);
         if (!@KNX_WriteDPT1($this->ReadPropertyInteger('FahrenID'), $ziel == self::ZU)) {
             $this->LogMessage('Fahren fehlgeschlagen: ' . $this->ReadPropertyInteger('FahrenID'), KL_ERROR);
@@ -664,7 +664,7 @@ class Rollocontroller extends IPSModule
     private function PositionAnfahren(int $ziel, string $grund): void
     {
         $ziel = $this->Begrenzen($ziel);
-        $this->SetBuffer('BefehlPositionID', (string) time());
+        $this->BefehlMerken('PositionID', $ziel);
         $this->Grund($grund);
         $variable = $this->WertVariable('PositionID');
         if ($variable == 0 || !@RequestAction($variable, $ziel)) {
@@ -676,7 +676,7 @@ class Rollocontroller extends IPSModule
 
     private function Stoppen(string $grund): void
     {
-        $this->SetBuffer('BefehlStoppID', (string) time());
+        $this->BefehlMerken('StoppID', true);
         $this->Grund($grund);
         if (!@KNX_WriteDPT1($this->ReadPropertyInteger('StoppID'), true)) {
             $this->LogMessage('Stoppen fehlgeschlagen: ' . $this->ReadPropertyInteger('StoppID'), KL_ERROR);
@@ -1071,11 +1071,23 @@ class Rollocontroller extends IPSModule
      * Ein Telegramm auf einer Adresse des Rollos ist das eigene, wenn das Modul dort gerade
      * selbst gesendet hat. Das gilt für genau ein Telegramm, das nächste kommt von außen.
      */
-    private function EigenesTelegramm(string $eigenschaft): bool
+    /**
+     * Merkt sich den eigenen Befehl auf einer Adresse des Rollos. Symcon liefert ein eigenes
+     * Telegramm zweimal an die Instanz: beim Schreiben und eine Sekunde später vom Bus zurück.
+     * Deshalb zählt jede Meldung mit diesem Wert innerhalb der Sperrzeit als eigene, ein
+     * anderer Wert in der Zeit kommt von einem anderen Gerät.
+     */
+    private function BefehlMerken(string $eigenschaft, $wert): void
     {
-        $eigen = time() - (int) $this->GetBuffer('Befehl' . $eigenschaft) <= self::BEFEHL_SPERRE_S;
-        $this->SetBuffer('Befehl' . $eigenschaft, '');
-        return $eigen;
+        $this->SetBuffer('Befehl' . $eigenschaft, json_encode(['Zeit' => time(), 'Wert' => $wert]));
+    }
+
+    private function EigenesTelegramm(string $eigenschaft, $wert): bool
+    {
+        $befehl = json_decode($this->GetBuffer('Befehl' . $eigenschaft), true);
+        return is_array($befehl)
+            && time() - (int) $befehl['Zeit'] <= self::BEFEHL_SPERRE_S
+            && json_encode($befehl['Wert']) === json_encode($wert);
     }
 
     private function AutomatikFrei(): bool

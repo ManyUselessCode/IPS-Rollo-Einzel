@@ -13,6 +13,8 @@ declare(strict_types=1);
 require __DIR__ . '/Symcon.php';
 require __DIR__ . '/../Rollocontroller/module.php';
 
+Sym::$echo = !getenv('OHNE_ECHO');
+
 const AUF = 0;
 const STEHT = 1;
 const AB = 2;
@@ -367,6 +369,31 @@ druecke($k['MdtLang'], true);
 gleich(Sym::gesendet($ab, $k['Rollo']), ['Position=60'], 'Lüftungsposition aus den Einstellungen');
 
 // ====================================================================== Sperre
+
+titel('Eigene Telegramme kommen doppelt an');
+[$m, $k, $a] = aufbau();
+druecke($k['MdtKurz'], true, 1.0);
+gleich($m->GetValue('Grund'), 'Ab: Wippe', 'eigenes Fahren: die zweite Zustellung zählt nicht als Extern');
+druecke($k['MdtKurz'], true, 1.0);
+gleich($m->GetValue('Grund'), 'Stopp: Wippe', 'eigener Stopp: kein Extern');
+druecke($k['MdtLang'], true, 1.0);
+gleich($m->GetValue('Grund'), 'Lüften: Wippe lang', 'eigene Position: kein Extern');
+Sym::weiter(70.0); // Fahrt zu Ende, sonst stoppt die Sperre
+$m->RequestAction('Sperre', true);
+Sym::verarbeite();
+gleich($m->GetValue('Grund'), 'Sperre an: App', 'eigene Sperre: kein Extern');
+$m->RequestAction('Sperre', false);
+Sym::verarbeite();
+[$m, $k, $a] = aufbau();
+druecke($k['MdtKurz'], true, 1.0);
+Sym::telegramm($k['Fahren'], false);
+Sym::verarbeite();
+gleich($m->GetValue('Grund'), 'Auf: von Extern', 'anderer Wert kurz nach dem eigenen Befehl kommt von einem anderen Gerät');
+[$m, $k, $a] = aufbau();
+druecke($k['MdtKurz'], true, 6.0);
+Sym::telegramm($k['Fahren'], true);
+Sym::verarbeite();
+gleich($m->GetValue('Grund'), 'Ab: von Extern', 'gleicher Wert nach der Sperrzeit ist Extern');
 
 titel('Sperre');
 [$m, $k, $a] = aufbau(['Sperre' => null]);
