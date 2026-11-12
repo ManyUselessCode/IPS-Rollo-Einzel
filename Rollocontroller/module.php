@@ -55,6 +55,7 @@ class Rollocontroller extends IPSModule
     private const FAHRT_WARTEN = 2;         // so viele Fahrzeiten wartet das Modul auf die Meldung des Aktors
     private const FAHRT_RESERVE_S = 3;      // Zuschlag auf diese Wartezeit
     private const NACHLAUF_S = 2;           // so lange nach Fahrtbeginn kann noch die Meldung der vorigen Fahrt kommen
+    private const MELDUNG_RUHE_S = 3;       // so lange nach einer Meldung abseits des Ziels ohne weitere Meldung gilt die Fahrt als beendet
 
     private const ROLLO_INSTANZEN = [
         'FahrenID'   => 'Auf/Ab fahren',
@@ -251,9 +252,11 @@ class Rollocontroller extends IPSModule
                 $this->StartSchritt();
                 break;
             case 'FahrtAbgelaufen':
-                // der Aktor hat nichts gemeldet: das Ziel gilt als erreicht, bis er meldet
+                // Hat der Aktor unterwegs gemeldet und dann nicht mehr, gilt seine letzte Meldung.
+                // Hat er gar nichts gemeldet, gilt das Ziel als erreicht, bis er meldet.
                 $this->SetTimerInterval('Fahrt', 0);
-                $this->FahrtEndet();
+                $fahrt = json_decode($this->GetBuffer('Fahrt'), true);
+                $this->FahrtEndet(is_array($fahrt) && isset($fahrt['Gemeldet']) ? (int) $fahrt['Gemeldet'] : null);
                 break;
             case 'AutomatikPruefen':
                 $this->AutomatikPruefen();
@@ -839,18 +842,28 @@ class Rollocontroller extends IPSModule
     }
 
     /**
-     * Der Aktor meldet die Position am Ende einer Fahrt und nach einem Stopp, die Fahrt ist
-     * damit zu Ende. Während der Fahrt zählt eine Meldung abseits des Ziels nicht, wenn sie
-     * unverändert ist (Antwort auf eine Leseanfrage) oder gleich nach dem Fahrtbeginn kommt
-     * (Meldung der vorigen Fahrt, etwa nach Stopp und sofortigem Richtungswechsel).
+     * Eine Meldung am Ziel beendet die Fahrt. Manche Aktoren melden nur am Ende einer Fahrt
+     * und nach einem Stopp, andere auch unterwegs alle paar Sekunden. Eine geänderte Meldung
+     * abseits des Ziels beendet die Fahrt deshalb erst, wenn danach MELDUNG_RUHE_S lang keine
+     * weitere kommt; bis dahin rechnet die Schätzung von ihr aus weiter. Eine Meldung abseits
+     * des Ziels zählt gar nicht, wenn sie unverändert ist (Antwort auf eine Leseanfrage) oder
+     * gleich nach dem Fahrtbeginn kommt (Meldung der vorigen Fahrt).
      */
     private function StatusGemeldet(int $position, bool $geaendert): void
     {
         $fahrt = json_decode($this->GetBuffer('Fahrt'), true);
         if ($this->Fahrt() != self::FAHRT_STEHT && is_array($fahrt)) {
             $amZiel = abs($position - (int) $fahrt['Ziel']) <= self::TOLERANZ;
-            $frisch = microtime(true) - (float) $fahrt['Start'] < self::NACHLAUF_S;
-            if (!$amZiel && (!$geaendert || $frisch)) {
+            if (!$amZiel) {
+                $frisch = microtime(true) - (float) $fahrt['Start'] < self::NACHLAUF_S;
+                if ($geaendert && !$frisch) {
+                    $position = $this->Begrenzen($position);
+                    $fahrt['Von'] = (float) $position;
+                    $fahrt['Start'] = microtime(true);
+                    $fahrt['Gemeldet'] = $position;
+                    $this->SetBuffer('Fahrt', json_encode($fahrt));
+                    $this->SetTimerInterval('Fahrt', self::MELDUNG_RUHE_S * 1000);
+                }
                 return;
             }
         }
@@ -932,7 +945,7 @@ class Rollocontroller extends IPSModule
 
     /**
      * Beste bekannte Position. Fährt das Rollo, wird sie aus Startzeit und Fahrzeit
-     * geschätzt, denn der Aktor meldet unterwegs nichts. Steht es, gilt der Stand aus der
+     * geschätzt, ab der letzten Meldung des Aktors, falls er unterwegs meldet. Steht es, gilt der Stand aus der
      * letzten Schätzung, solange der Aktor seitdem nichts gemeldet hat, sonst die gemeldete.
      */
     private function GeschaetztePosition(): ?float

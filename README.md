@@ -87,7 +87,7 @@ Die Sonne scheint aufs Fenster, wenn sie höchstens um den Öffnungswinkel links
 
 ## Fahrt und Position
 
-Die Position kommt aus der Status-Variable. Ein eigenes Telegramm liefert Symcon zweimal an die Instanz, beim Schreiben und vom Bus zurück; das Modul zählt beide als eigene, solange der Wert stimmt. Der Aktor meldet nicht, ob das Rollo fährt. Das Modul leitet es aus den Telegrammen auf den Adressen des Rollos ab, auch aus denen anderer Geräte: Ein Fahrbefehl beginnt die Fahrt, ein Stopp oder die neue Position vom Aktor beendet sie. Bleibt die Meldung aus, endet die Fahrt nach der doppelten Fahrzeit. Unterwegs zeigt „Position“ das Ziel, nach einem Stopp die geschätzte Position, bis der Aktor die echte meldet. Solange der Aktor nichts gemeldet hat, spart das Modul keine Fahrt ein und gibt jeden Stopp weiter. Fährt jemand das Rollo von außen, steht „von Extern“ im Grund.
+Die Position kommt aus der Status-Variable. Ein eigenes Telegramm liefert Symcon zweimal an die Instanz, beim Schreiben und vom Bus zurück; das Modul zählt beide als eigene, solange der Wert stimmt. Der Aktor meldet nicht, ob das Rollo fährt. Das Modul leitet es aus den Telegrammen auf den Adressen des Rollos ab, auch aus denen anderer Geräte: Ein Fahrbefehl beginnt die Fahrt, ein Stopp oder die Meldung des Ziels vom Aktor beendet sie. Meldet der Aktor auch unterwegs (etwa MDT Jalousieaktor), rechnet das Modul von jeder Meldung aus weiter; kommt 3 s lang keine weitere, endet die Fahrt bei der letzten Meldung. Bleibt die Meldung aus, endet die Fahrt nach der doppelten Fahrzeit. Unterwegs zeigt „Position“ das Ziel, nach einem Stopp die geschätzte Position, bis der Aktor die echte meldet. Solange der Aktor nichts gemeldet hat, spart das Modul keine Fahrt ein und gibt jeden Stopp weiter. Fährt jemand das Rollo von außen, steht „von Extern“ im Grund.
 
 ## Start
 
@@ -100,7 +100,7 @@ Nach dem Start gelten die beiden Zeitpunkte sofort. Nach 30 Sekunden liest das M
 ## Voraussetzung
 
 - KNX-DPT-Instanzen mit „Status emulieren“: DPT 1 für Auf/Ab fahren, Stopp, Sperren, Taster und Jung-LEDs, DPT 5 für Position, Status und MDT-LEDs.
-- Der Aktor meldet die Position am Ende der Fahrt und nach einem Stopp, nicht laufend unterwegs.
+- Der Aktor meldet die Position am Ende der Fahrt und nach einem Stopp, manche Aktoren auch laufend unterwegs (beides geht).
 - Location Control für den Sonnenstand der Verschattung. Symcon ab 8.0.
 
 ## Tests

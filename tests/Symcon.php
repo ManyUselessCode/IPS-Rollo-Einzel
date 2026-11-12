@@ -277,6 +277,7 @@ final class Aktor
     public float $seit = 0.0;
     public bool $sperre = false;
     public bool $defekt = false; // fährt und meldet nicht
+    public float $takt = 0.0;    // > 0: meldet auch unterwegs, alle $takt Sekunden (etwa MDT Jalousieaktor)
     private int $lauf = 0;
 
     public function __construct(private array $knx, public float $fahrzeit = 19.0, float $start = 0.0)
@@ -320,6 +321,9 @@ final class Aktor
             $this->ziel = null; // steht schon dort, keine Meldung
             return;
         }
+        if ($this->takt > 0) {
+            $this->unterwegs($lauf);
+        }
         Sym::plane(Sym::$jetzt + $dauer, function () use ($lauf): void {
             if ($lauf != $this->lauf || $this->ziel === null) {
                 return;
@@ -327,6 +331,17 @@ final class Aktor
             $this->position = $this->ziel;
             $this->ziel = null;
             $this->melde();
+        });
+    }
+
+    private function unterwegs(int $lauf): void
+    {
+        Sym::plane(Sym::$jetzt + $this->takt, function () use ($lauf): void {
+            if ($lauf != $this->lauf || $this->ziel === null || $this->jetzt() == $this->ziel) {
+                return;
+            }
+            $this->melde();
+            $this->unterwegs($lauf);
         });
     }
 

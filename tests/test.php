@@ -556,6 +556,45 @@ $ab = count(Sym::$telegramme);
 druecke($k['MdtKurz'], false, 1.0);
 gleich([Sym::gesendet($ab, $k['Rollo']), $m->GetValue('Fahrt')], [['Fahren=aus'], AUF], 'Position nie gemeldet: auf wird gesendet');
 
+titel('Aktor meldet auch unterwegs');
+[$m, $k, $a] = aufbau(['Fahrzeit' => 20, 'Echt' => 20.0]);
+$a->takt = 2.0;
+$ab = count(Sym::$telegramme);
+$abLed = count(Sym::$telegramme);
+druecke($k['MdtKurz'], true, 9.0);
+gleich($m->GetValue('Fahrt'), AB, 'Meldungen unterwegs beenden die Fahrt nicht');
+gleich(Sym::gesendet($abLed, $k['Leds']), ['LedAb=3', 'JungBlau=aus', 'JungAb=an'], 'die LED bleibt grün, solange es fährt');
+$ab = count(Sym::$telegramme);
+druecke($k['MdtKurz'], true, 0.3);
+gleich(Sym::gesendet($ab, $k['Rollo']), ['Stopp=an'], 'ein zweiter Klick in Fahrtrichtung stoppt');
+gleich($m->GetValue('Fahrt'), STEHT, 'Fahrt steht nach dem Stopp');
+Sym::weiter(2);
+gleich($m->GetValue('Position'), 45, 'Position vom Aktor nach dem Stopp (9,1 von 20 s)');
+
+[$m, $k, $a] = aufbau(['Fahrzeit' => 20, 'Echt' => 20.0]);
+$a->takt = 2.0;
+druecke($k['MdtKurz'], true, 19.5);
+gleich($m->GetValue('Fahrt'), AB, 'kurz vor dem Ende fährt es noch');
+Sym::weiter(1.0);
+gleich([$m->GetValue('Fahrt'), $m->GetValue('Position'), $m->timer['Fahrt']['Faellig']], [STEHT, 100, null], 'die Meldung am Ziel beendet die Fahrt');
+
+[$m, $k, $a] = aufbau(['Fahrzeit' => 20, 'Echt' => 20.0]);
+$a->takt = 2.0;
+druecke($k['MdtKurz'], true, 7.0);
+$a->halte(); // Stopp am Aktor selbst, ohne Telegramm
+Sym::weiter(1.5);
+gleich($m->GetValue('Fahrt'), AB, 'gleich nach der letzten Meldung fährt es im Modul noch');
+Sym::weiter(3.0);
+gleich([$m->GetValue('Fahrt'), $m->GetValue('Position')], [STEHT, 35], 'ohne weitere Meldung steht es nach 3 s bei der letzten Meldung');
+
+[$m, $k, $a] = aufbau();
+druecke($k['MdtKurz'], true, 7.0);
+$a->halte();
+Sym::weiter(1.5);
+gleich($m->GetValue('Fahrt'), AB, 'Aktor ohne Meldungen unterwegs: die Meldung nach einem Stopp von außen beendet die Fahrt erst 3 s später');
+Sym::weiter(3.0);
+gleich([$m->GetValue('Fahrt'), $m->GetValue('Position')], [STEHT, 37], 'dann steht es bei der gemeldeten Position');
+
 titel('Neustart von Symcon');
 [$m, $k, $a] = aufbau();
 druecke($k['MdtKurz'], true, 6.0);
